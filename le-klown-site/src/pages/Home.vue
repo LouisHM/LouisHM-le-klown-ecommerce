@@ -18,9 +18,11 @@
 
     <!-- Section 2 : image gauche + texte droite -->
     <section class="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12 py-20 px-6">
-      <img src="/assets/img/leklown2.jpg" alt="Public du cirque" class="rounded-xl shadow-xl w-full md:w-1/2 object-cover" />
+      <div class="rounded-xl shadow-xl w-full md:w-1/2 object-cover border-2 border-primary overflow-hidden mb-8 md:mb-0 hover:scale-105 transition-transform duration-500">
+      <img src="/assets/img/leklown2.jpg" alt="Public du cirque" class="w-full h-full object-cover rounded-xl" />
+      </div>
       <div class="flex-1">
-        <h2 class="text-4xl md:text-5xl font-heading text-primary mb-6">{{ $t('home.section2Title') }}</h2>
+        <h2 class="text-4xl md:text-5xl font-heading text-light mb-6">{{ $t('home.section2Title') }}</h2>
         <p class="text-lg md:text-xl max-w-xl">{{ $t('home.section2Text') }}</p>
       </div>
     </section>

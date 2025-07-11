@@ -4,7 +4,7 @@
     <button 
       v-if="!user"
       @click="signInWithGoogle"
-      class="ml-4 bg-primary text-light px-2 py-1 rounded-full hover:bg-light hover:text-dark transition shadow-lg">
+      class="ml-4 bg-light text-dark px-2 py-1 rounded-full hover:bg-primary hover:text-light transition shadow-lg">
       {{ $t('auth.login') }}
     </button>
 

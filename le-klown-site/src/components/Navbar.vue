@@ -1,5 +1,5 @@
 <template>
-  <header class="fixed top-0 left-0 w-full bg-backgroundDark text-light shadow-md z-50">
+  <header class="fixed top-0 left-0 w-full bg-dark text-light shadow-md z-50">
     <nav class="max-w-7xl mx-auto flex justify-between items-center p-4">
       <div class="text-3xl font-heading tracking-wide">
         <img src="../../public/assets/img/logo-klown.png" alt="LE KLOWN" width="50" class="inline-block mr-2">
