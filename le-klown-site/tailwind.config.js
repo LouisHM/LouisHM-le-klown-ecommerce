@@ -17,8 +17,8 @@ export default {
       },
       fontFamily: {
         sans: ['"Open Sans"', 'sans-serif'],
-        heading: ['"Bangers"', 'cursive'], // ex: police cirque fun
-      }
+        heading: ['"Lato"', 'sans-serif'], // ex: police cirque fun
+      },
     },
   },
   plugins: [],

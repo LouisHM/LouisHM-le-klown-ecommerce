@@ -8,8 +8,12 @@ const messages = {
       admin: 'Admin'
     },
     home: {
-      welcome: 'Welcome to LE KLOWN\'s site 🎪',
-      intro: 'Discover upcoming dates, the shop, and the circus universe of your favorite artist.'
+      welcome: "Bienvenue dans l'univers de LE KLOWN 🎪",
+      intro: "Plongez dans l'univers circassien de LE KLOWN, entre rires, folie et musique.",
+      section1Title: "Un style unique",
+      section1Text: "LE KLOWN mélange rap underground, performances de cirque et visuels extravagants.",
+      section2Title: "Un show inoubliable",
+      section2Text: "Venez voir le spectacle et vivez une expérience hors du commun !"
     },
     shop: {
       title: 'Shop',
@@ -18,7 +22,14 @@ const messages = {
     admin: {
       title: 'Back Office',
       subtitle: 'Manage dates and shop items here.'
-    }
+    },
+    auth: {
+      login: 'Sign in with Google',
+      logoutTitle: 'Sign out?',
+      logout: 'Sign out',
+      cancel: 'Cancel'
+    },
+    
   },
   fr: {
     navbar: {
@@ -27,8 +38,12 @@ const messages = {
       admin: 'Admin'
     },
     home: {
-      welcome: 'Bienvenue sur le site de LE KLOWN 🎪',
-      intro: 'Découvrez les prochaines dates, la boutique et tout l’univers cirque de votre artiste préféré.'
+      welcome: "Bienvenue dans l'univers LE KLOWN 🎪",
+      intro: "Plongez dans l'univers circassien de LE KLOWN, entre rires, folie et musique.",
+      section1Title: "Un style unique",
+      section1Text: "LE KLOWN mélange rap underground, performances de cirque et visuels extravagants.",
+      section2Title: "Un show inoubliable",
+      section2Text: "Venez voir le spectacle et vivez une expérience hors du commun !"
     },
     shop: {
       title: 'Boutique',
@@ -37,7 +52,13 @@ const messages = {
     admin: {
       title: 'Back Office',
       subtitle: 'Gérez les dates et les articles du shop ici.'
-    }
+    },
+    auth: {
+      login: 'Se connecter',
+      logoutTitle: 'Se déconnecter ?',
+      logout: 'Déconnexion',
+      cancel: 'Annuler'
+    },
   }
 }
 

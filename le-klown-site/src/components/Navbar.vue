@@ -2,7 +2,7 @@
   <header class="fixed top-0 left-0 w-full bg-backgroundDark text-light shadow-md z-50">
     <nav class="max-w-7xl mx-auto flex justify-between items-center p-4">
       <div class="text-3xl font-heading tracking-wide">
-        <img src="../assets/img/logo-klown.png" alt="LE KLOWN" width="50" class="inline-block mr-2">
+        <img src="../../public/assets/img/logo-klown.png" alt="LE KLOWN" width="50" class="inline-block mr-2">
         <span>LE KLOWN</span>
       </div>
 
@@ -14,9 +14,10 @@
         <RouterLink 
           class="px-4 py-2 rounded-full hover:bg-gray-700 transition"
           to="/shop">{{ $t('navbar.shop') }}</RouterLink>
-        <RouterLink 
-          class="px-4 py-2 rounded-full hover:bg-light hover:text-dark transition"
-          to="/admin">{{ $t('navbar.admin') }}</RouterLink>
+          <RouterLink v-if="role === 'admin'" to="/admin" class="px-4 py-2 rounded-full hover:bg-light hover:text-dark transition">
+            {{ $t('navbar.admin') }}</RouterLink>
+          <AuthButton />
+
 
         <!-- Language selector desktop -->
         <div class="relative ml-4">
@@ -41,10 +42,12 @@
     </nav>
 
     <!-- Menu mobile -->
-    <div v-if="isOpen" class="flex flex-col items-center bg-primary md:hidden space-y-4 py-6">
+    <div v-if="isOpen" class="flex flex-col items-center bg-backgroundDark md:hidden space-y-4 py-6">
       <RouterLink @click="isOpen = false" class="hover:text-secondary text-xl" to="/">{{ $t('navbar.home') }}</RouterLink>
       <RouterLink @click="isOpen = false" class="hover:text-secondary text-xl" to="/shop">{{ $t('navbar.shop') }}</RouterLink>
-      <RouterLink @click="isOpen = false" class="hover:text-secondary text-xl" to="/admin">{{ $t('navbar.admin') }}</RouterLink>
+          <RouterLink v-if="role === 'admin'" to="/admin" class="px-4 py-2 rounded-full hover:bg-light hover:text-dark transition">
+            {{ $t('navbar.admin') }}</RouterLink>
+      <AuthButton />
 
       <!-- Lang selector mobile -->
       <div class="flex space-x-4 mt-4">
@@ -57,7 +60,14 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import AuthButton from './AuthButton.vue'
+import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { fetchUserRole, user, role } from '../composables/useAuth'
+
+onMounted(() => {
+  fetchUserRole()
+})
 
 const isOpen = ref(false)
 const langMenu = ref(false)
