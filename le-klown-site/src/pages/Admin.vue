@@ -1,74 +1,82 @@
 <template>
-  <div class="min-h-screen bg-black flex pt-20">
-
-    <!-- Form à gauche -->
-    <div class="w-full md:w-1/2 p-8 text-light">
-      <h1 class="text-4xl font-heading text-primary mb-8">Back Office</h1>
+  <div class="pt-20 px-4 md:px-10 min-h-screen bg-dark text-light space-y-12">
+    <!-- ✅ Formulaire -->
+    <section class="bg-[#1a1a1a] border border-gray-700 rounded-lg p-6 max-w-3xl mx-auto shadow-lg">
+      <h2 class="text-2xl font-heading text-primary mb-6">Ajouter / Modifier un événement</h2>
 
       <form @submit.prevent="saveEvent" class="space-y-4">
-        <input v-model="newEvent.date" type="date" class="w-full p-2 border border-gray-600 bg-dark text-light rounded" required />
-        <input v-model="newEvent.lieu" type="text" placeholder="Lieu" class="w-full p-2 border border-gray-600 bg-dark text-light rounded" required />
-        <input v-model="newEvent.image_url" type="url" placeholder="URL Image" class="w-full p-2 border border-gray-600 bg-dark text-light rounded" />
-        <input v-model="newEvent.billeterie_url" type="url" placeholder="URL Billetterie" class="w-full p-2 border border-gray-600 bg-dark text-light rounded" />
-        <input v-model="newEvent.insta_url" type="url" placeholder="URL Instagram" class="w-full p-2 border border-gray-600 bg-dark text-light rounded" />
-        <input v-model="newEvent.prix_debut" type="number" placeholder="Prix de départ (€)" class="w-full p-2 border border-gray-600 bg-dark text-light rounded" />
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input v-model="newEvent.nom" type="text" placeholder="Nom de l’événement *" required class="form-input" />
+          <input v-model="newEvent.date" type="date" required class="form-input" />
+          <input v-model="newEvent.lieu" type="text" placeholder="Lieu *" required class="form-input" />
+          <input v-model="newEvent.prix_debut" type="number" placeholder="Prix de départ (€) *" required class="form-input" />
+          <input v-model="newEvent.image_url" type="url" placeholder="URL de l'image" class="form-input" />
+          <input v-model="newEvent.billeterie_url" type="url" placeholder="Lien billetterie" class="form-input" />
+          <input v-model="newEvent.insta_url" type="url" placeholder="Lien Instagram" class="form-input" />
+        </div>
+        <textarea v-model="newEvent.description" placeholder="Description (optionnel)" rows="4" class="form-textarea w-full" />
 
-        <div class="flex space-x-4">
-          <button type="submit" class="bg-primary text-dark px-6 py-2 rounded hover:bg-light">
+        <div class="flex space-x-4 mt-4">
+          <button type="submit" class="bg-primary text-dark px-6 py-2 rounded hover:bg-light font-semibold">
             {{ editing ? 'Mettre à jour' : 'Ajouter' }}
           </button>
-          <button type="button" @click="resetForm" v-if="editing" class="px-6 py-2 rounded border border-light hover:bg-gray-800">
+          <button v-if="editing" @click="resetForm" type="button" class="px-6 py-2 rounded border border-light hover:bg-gray-100">
             Annuler
           </button>
         </div>
       </form>
-    </div>
+    </section>
 
-    <!-- Liste à droite -->
-<div class="w-full md:w-1/2 p-8 text-light space-y-12 overflow-x-auto">
-
-  <div v-if="aVenir.length">
-    <h2 class="text-2xl font-heading text-primary mb-4">À venir</h2>
-    <div class="flex space-x-4 overflow-x-auto pb-4">
+    <!-- À venir -->
+    <h2 class="text-3xl font-heading text-primary mb-6 text-start">{{ $t('events.upcoming') }}</h2>
+    <div class="grid justify-center gap-4 grid-cols-[repeat(auto-fit,_minmax(260px,_1fr))] mb-12">
       <EventCard
         v-for="event in aVenir"
         :key="event.id"
         :event="event"
         :editable="true"
+        @click="openModal(event)"
         @edit="editEvent"
         @delete="confirmDelete"
       />
     </div>
-  </div>
 
-  <div v-if="passes.length">
-    <h2 class="text-2xl font-heading text-primary mb-4">Passés</h2>
-    <div class="flex space-x-4 overflow-x-auto opacity-60 pb-4">
-      <EventCard
+    <!-- Passés -->
+    <h2 class="text-3xl font-heading text-primary mb-6 text-start">{{ $t('events.past') }}</h2>
+    <div class="grid justify-center gap-4 grid-cols-[repeat(auto-fit,_minmax(260px,_1fr))]">
+      <div
         v-for="event in passes"
         :key="event.id"
-        :event="event"
-        :editable="true"
-        @edit="editEvent"
-        @delete="confirmDelete"
-      />
+        class="grayscale opacity-60 hover:opacity-90 transition"
+      >
+        <EventCard
+          :event="event"
+          :editable="true"
+          @click="openModal(event)"
+          @edit="editEvent"
+          @delete="confirmDelete"
+        />
+      </div>
     </div>
-  </div>
 
-</div>
+    <!-- ✅ Modal détails -->
+    <EventModal
+      v-if="selectedEvent"
+      :event="selectedEvent"
+      @close="selectedEvent = null"
+    />
 
-    <!-- Modal -->
+    <!-- ✅ Modal confirmation delete -->
     <div v-if="showConfirm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-dark text-light p-6 rounded-lg shadow-lg space-y-4 w-[90%] max-w-md border border-gray-700">
+      <div class="bg-light text-dark p-6 rounded-lg shadow-lg space-y-4 w-[90%] max-w-md">
         <h2 class="text-2xl font-heading mb-4">Supprimer cet événement ?</h2>
         <p>Cette action est irréversible.</p>
         <div class="flex justify-end space-x-4 mt-6">
-          <button @click="showConfirm = false" class="px-4 py-2 rounded border border-light hover:bg-gray-700">Annuler</button>
+          <button @click="showConfirm = false" class="px-4 py-2 rounded border border-dark hover:bg-gray-200">Annuler</button>
           <button @click="deleteEvent" class="px-4 py-2 rounded bg-red-600 text-light hover:bg-dark">Confirmer</button>
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -76,15 +84,18 @@
 import { ref, onMounted } from 'vue'
 import { supabase } from '../supabase/client'
 import EventCard from '../components/EventCard.vue'
+import EventModal from '../components/EventModal.vue'
 
 const newEvent = ref({
   id: null,
+  nom: '',
   date: '',
   lieu: '',
   image_url: '',
   billeterie_url: '',
   insta_url: '',
-  prix_debut: null
+  prix_debut: null,
+  description: ''
 })
 
 const editing = ref(false)
@@ -93,6 +104,7 @@ const aVenir = ref<any[]>([])
 const passes = ref<any[]>([])
 const showConfirm = ref(false)
 const deleteId = ref<number | null>(null)
+const selectedEvent = ref(null)
 
 async function fetchEvents() {
   const { data } = await supabase.from('evenements').select('*').order('date', { ascending: true })
@@ -103,22 +115,30 @@ async function fetchEvents() {
   passes.value = events.value.filter(e => new Date(e.date) < today)
 }
 
+function openModal(event: any) {
+  selectedEvent.value = event
+}
+
 async function saveEvent() {
   if (editing.value) {
     const { error } = await supabase.from('evenements').update({
+      nom: newEvent.value.nom,
       date: newEvent.value.date,
       lieu: newEvent.value.lieu,
+      prix_debut: newEvent.value.prix_debut,
       image_url: newEvent.value.image_url,
       billeterie_url: newEvent.value.billeterie_url,
       insta_url: newEvent.value.insta_url,
-      prix_debut: newEvent.value.prix_debut
+      description: newEvent.value.description
     }).eq('id', newEvent.value.id)
+
     if (error) console.error('Update error:', error.message)
   } else {
     const { id, ...eventWithoutId } = newEvent.value
     const { error } = await supabase.from('evenements').insert([eventWithoutId])
-    if (error) console.error('Add error:', error.message)
+    if (error) console.error('Insert error:', error.message)
   }
+
   await fetchEvents()
   resetForm()
 }
@@ -146,12 +166,14 @@ function editEvent(event: any) {
 function resetForm() {
   newEvent.value = {
     id: null,
+    nom: '',
     date: '',
     lieu: '',
     image_url: '',
     billeterie_url: '',
     insta_url: '',
-    prix_debut: null
+    prix_debut: null,
+    description: ''
   }
   editing.value = false
 }

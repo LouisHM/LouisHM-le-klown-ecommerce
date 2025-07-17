@@ -5,7 +5,8 @@ const messages = {
     navbar: {
       home: 'Home',
       shop: 'Shop',
-      admin: 'Admin'
+      admin: 'Admin',
+      events: 'Events'
     },
     home: {
       welcome: "Bienvenue dans l'univers de LE KLOWN 🎪",
@@ -29,13 +30,20 @@ const messages = {
       logout: 'Sign out',
       cancel: 'Cancel'
     },
-    
+      events: {
+        title: "Events",
+        upcoming: "Upcoming",
+        past: "Past"
+      },
+
   },
+  // French translations
   fr: {
     navbar: {
       home: 'Accueil',
       shop: 'Boutique',
-      admin: 'Admin'
+      admin: 'Admin',
+      events: 'Événements'
     },
     home: {
       welcome: "Bienvenue dans l'univers LE KLOWN 🎪",
@@ -59,6 +67,11 @@ const messages = {
       logout: 'Déconnexion',
       cancel: 'Annuler'
     },
+    events: {
+        title: "Événements",
+        upcoming: "À venir",
+        past: "Passés"
+      },
   }
 }
 

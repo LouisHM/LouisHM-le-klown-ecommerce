@@ -13,6 +13,9 @@
           to="/">{{ $t('navbar.home') }}</RouterLink>
         <RouterLink 
           class="px-4 py-2 rounded-full hover:bg-gray-700 transition"
+          to="/events">{{ $t('navbar.events') }}</RouterLink>
+        <RouterLink 
+          class="px-4 py-2 rounded-full hover:bg-gray-700 transition"
           to="/shop">{{ $t('navbar.shop') }}</RouterLink>
           <RouterLink v-if="role === 'admin'" to="/admin" class="px-4 py-2 rounded-full hover:bg-light hover:text-dark transition">
             {{ $t('navbar.admin') }}</RouterLink>
@@ -44,7 +47,9 @@
     <!-- Menu mobile -->
     <div v-if="isOpen" class="flex flex-col items-center bg-backgroundDark md:hidden space-y-4 py-6">
       <RouterLink @click="isOpen = false" class="hover:text-secondary text-xl" to="/">{{ $t('navbar.home') }}</RouterLink>
+      <RouterLink @click="isOpen = false" class="hover:text-secondary text-xl" to="/events">{{ $t('navbar.events') }}</RouterLink>
       <RouterLink @click="isOpen = false" class="hover:text-secondary text-xl" to="/shop">{{ $t('navbar.shop') }}</RouterLink>
+      
           <RouterLink v-if="role === 'admin'" to="/admin" class="px-4 py-2 rounded-full hover:bg-light hover:text-dark transition">
             {{ $t('navbar.admin') }}</RouterLink>
       <AuthButton />

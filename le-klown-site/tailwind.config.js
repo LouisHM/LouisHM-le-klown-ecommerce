@@ -14,6 +14,7 @@ export default {
         light: '#ffffff',
         backgroundDark: '#1F1F1F', // gris clair
         text: '#333333',       // gris foncé      
+        transparent: 'rgba(19, 18, 19, 0.8)',
       },
       fontFamily: {
         sans: ['"Open Sans"', 'sans-serif'],
@@ -21,5 +22,16 @@ export default {
       },
     },
   },
-  plugins: [],
+plugins: [
+  function ({ addComponents }) {
+    addComponents({
+      '.form-input': {
+        '@apply w-full p-2 rounded bg-dark border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary text-light': ''
+      },
+      '.form-textarea': {
+        '@apply p-2 rounded bg-dark border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary text-light': ''
+      }
+    })
+  }
+  ],
 }
