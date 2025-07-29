@@ -1,20 +1,20 @@
 <template>
-  <div class="pt-20 px-4 text-light bg-dark mx-auto">
+  <div class="pt-24 max-w-7xl flex flex-col align-center justify-center px-4 text-light bg-dark mx-auto">
     <!-- À venir -->
-    <h2 class="text-3xl font-heading text-primary mb-6 text-start">{{ $t('events.upcoming') }}</h2>
-    <div class="grid justify-center gap-4 grid-cols-[repeat(auto-fit,_minmax(260px,_1fr))] mb-12">
+    <h2 class="text-3xl font-heading text-light uppercase mb-6 text-start">{{ $t('events.upcoming') }}</h2>
+    <ul class="grid justify-center gap-4 grid-cols-[repeat(auto-fit,_minmax(260px,_1fr))] mb-12">
       <EventCard
         v-for="event in upcomingEvents"
         :key="event.id"
         :event="event"
         @click="openModal(event)"
       />
-    </div>
+    </ul>
 
     <!-- Passés -->
-    <h2 class="text-3xl font-heading text-primary mb-6 text-start">{{ $t('events.past') }}</h2>
+    <h2 class="text-3xl font-heading text-light uppercase mb-6 text-start">{{ $t('events.past') }}</h2>
     <div class="grid justify-center gap-4 grid-cols-[repeat(auto-fit,_minmax(260px,_1fr))]">
-      <div
+      <ul
         v-for="event in pastEvents"
         :key="event.id"
         class="grayscale opacity-60 hover:opacity-90 transition"
@@ -23,7 +23,7 @@
           :event="event"
           @click="openModal(event)"
         />
-      </div>
+        </ul>
     </div>
 
     <!-- Modal -->

@@ -1,5 +1,5 @@
 <template>
-  <div
+  <li
     class="relative group w-[260px] h-[240px] rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition cursor-pointer"
     @click="$emit('click')"
   >
@@ -41,7 +41,7 @@
       <button @click="$emit('edit', event)" class="text-xs px-2 py-1 rounded bg-accent text-light hover:bg-light hover:text-dark transition">✏️</button>
       <button @click="$emit('delete', event.id)" class="text-xs px-2 py-1 rounded bg-red-600 text-light hover:bg-light hover:text-dark transition">🗑️</button>
     </div>
-  </div>
+</li>
 </template>
 
 <script setup lang="ts">

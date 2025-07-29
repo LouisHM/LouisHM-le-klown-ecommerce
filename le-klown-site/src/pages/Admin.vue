@@ -1,5 +1,5 @@
 <template>
-  <div class="pt-20 px-4 md:px-10 min-h-screen bg-dark text-light space-y-12">
+  <div class="pt-24 px-4 md:px-10 min-h-screen bg-dark text-light space-y-12">
     <!-- ✅ Formulaire -->
     <section class="bg-[#1a1a1a] border border-gray-700 rounded-lg p-6 max-w-3xl mx-auto shadow-lg">
       <h2 class="text-2xl font-heading text-primary mb-6">Ajouter / Modifier un événement</h2>

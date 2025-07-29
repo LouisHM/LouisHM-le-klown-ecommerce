@@ -1,15 +1,24 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Admin from './pages/Admin.vue'
 import Home from './pages/Home.vue'
 import Events from './pages/Events.vue'
 import Shop from './pages/Shop.vue'
-import { role } from './composables/useAuth'
+import Admin from './pages/Admin.vue'
+import { role, fetchUserRole } from './composables/useAuth'
 
 const routes = [
   { path: '/', component: Home },
-  { path: '/shop', component: Shop },
-  { path: '/admin', component: Admin, meta: { requiresAdmin: true }},
   { path: '/events', component: Events },
+  { path: '/shop', component: Shop },
+  {
+    path: '/admin',
+    component: Admin,
+    meta: { requiresAdmin: true },
+  },
+  // Catch-all route (404)
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/',
+  },
 ]
 
 const router = createRouter({
@@ -17,9 +26,15 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to, from, next) => {
-  if (to.meta.requiresAdmin && role.value !== 'admin') {
-    next('/') // ou afficher une page 403
+// ✅ Guard global pour vérifier les droits admin
+router.beforeEach(async (to, from, next) => {
+  if (to.meta.requiresAdmin) {
+    await fetchUserRole() // s'assure que le rôle est à jour
+    if (role.value === 'admin') {
+      next()
+    } else {
+      next('/403') // ou next('/') si tu préfères
+    }
   } else {
     next()
   }

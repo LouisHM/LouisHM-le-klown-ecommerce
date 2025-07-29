@@ -5,6 +5,15 @@ export default {
   ],
   theme: {
     extend: {
+      keyframes: {
+        underlineExpand: {
+          '0%': { width: '0%' },
+          '100%': { width: '100%' },
+        },
+      },
+      animation: {
+        'underline-hover': 'underlineExpand 0.2s ease-out forwards',
+      },
       colors: {
         primary: '#E81C25',   // rouge cirque
         secondary: '#28A4D1', // bleu accent
@@ -14,11 +23,12 @@ export default {
         light: '#ffffff',
         backgroundDark: '#1F1F1F', // gris clair
         text: '#333333',       // gris foncé      
-        transparent: 'rgba(19, 18, 19, 0.8)',
+        transparent: 'rgba(19, 18, 19, 0.9)',
       },
       fontFamily: {
-        sans: ['"Open Sans"', 'sans-serif'],
-        heading: ['"Lato"', 'sans-serif'], // ex: police cirque fun
+        sans: ['"Poppins"', 'sans-serif'],
+        // heading: ['"Lato"', 'sans-serif'], // ex: police cirque fun
+        heading: ['"Special Gothic Expanded One"', 'sans-serif'], // ex: police cirque fun
       },
     },
   },
