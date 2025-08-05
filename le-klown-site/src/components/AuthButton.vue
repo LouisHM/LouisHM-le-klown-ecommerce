@@ -29,7 +29,7 @@
 
 
     <!-- Pop-up logout -->
-    <div v-if="showLogout" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div v-if="showLogout" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
       <div class="bg-backgroundDark text-light p-6 rounded-lg shadow-lg space-y-4">
         <p class="text-xl font-bold">{{ $t('auth.logoutTitle') }}</p>
         <div class="flex justify-end space-x-4">

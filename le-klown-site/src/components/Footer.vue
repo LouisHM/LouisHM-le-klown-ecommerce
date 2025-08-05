@@ -6,8 +6,8 @@
       <div class="space-y-4">
         <h3 class="text-xl font-heading text-primary flex flex-col items-center md:items-center">{{ $t('footer.followUs') }}</h3>
         <div class="flex justify-center md:justify-center gap-4 text-2xl">
-          <a href="https://facebook.com/leklown" target="_blank" rel="noopener" class="hover:text-primary transition"><i class="fab fa-facebook"></i></a>
-          <a href="https://instagram.com/leklown" target="_blank" rel="noopener" class="hover:text-primary transition"><i class="fab fa-instagram"></i></a>
+          <a href="https://www.facebook.com/Klowntrance/" target="_blank" rel="noopener" class="hover:text-primary transition"><i class="fab fa-facebook"></i></a>
+          <a href="https://www.instagram.com/klownlife" target="_blank" rel="noopener" class="hover:text-primary transition"><i class="fab fa-instagram"></i></a>
           <a href="https://tiktok.com/@leklown" target="_blank" rel="noopener" class="hover:text-primary transition"><i class="fab fa-tiktok"></i></a>
         </div>
       </div>
@@ -15,19 +15,23 @@
       <!-- Contact -->
       <div class="space-y-4">
         <h3 class="text-xl font-heading text-primary flex flex-col items-center md:items-center">{{ $t('footer.contact') }}</h3>
-        <p class="text-sm">📞 +33 6 12 34 56 78</p>
-        <p class="text-sm">📧 <a href="mailto:contact@leklown.fr" class="hover:text-primary transition">contact@leklown.fr</a></p>
-      </div>
-
-      <!-- Booking -->
-      <div class="space-y-4 flex flex-col items-center md:items-center">
-        <h3 class="text-xl font-heading text-primary">{{ $t('footer.reservation') }}</h3>
         <button
         class="bg-primary text-light px-6 py-3 rounded-full font-semibold hover:bg-light hover:text-dark transition-all duration-700"
         @click="openBooking"
         >
-        {{ $t('home.bookMe') }}
+        {{ $t('footer.contactMe') }}
         </button>
+      </div>
+
+      <!-- Booking -->
+      <div class="space-y-4 flex flex-col items-center md:items-center">
+        <h3 class="text-xl font-heading text-primary">{{ $t('footer.listenMe') }}</h3>
+        <div class="flex justify-center md:justify-center gap-4 text-2xl">
+          <a href="https://open.spotify.com/intl-fr/artist/1Dk7GvynJJ9lOcTLQk6Ot3" target="_blank" rel="noopener" class="hover:text-primary transition"><i class="fab fa-spotify"></i></a>
+          <a href="https://www.deezer.com/fr/artist/81617372" target="_blank" rel="noopener" class="hover:text-primary transition"><i class="fab fa-deezer"></i></a>
+          <a href="https://music.apple.com/fr/artist/le-klown/1492515036" target="_blank" rel="noopener" class="hover:text-primary transition"><i class="fa-solid fa-music"></i></a>
+
+        </div>
       </div>
     </div>
 

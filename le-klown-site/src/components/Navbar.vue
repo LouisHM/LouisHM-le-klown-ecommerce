@@ -1,7 +1,7 @@
 <template>
 <header
   :class="[
-    'fixed top-0 left-0 w-full z-50 duration-500',
+    'fixed top-0 left-0 w-full z-50 duration-500 animate-fade-in',
     showNavbar ? 'translate-y-0' : '-translate-y-full',
     isScrolled ? 'bg-dark shadow-md' : '',
     isOpen ? 'bg-dark' : ''

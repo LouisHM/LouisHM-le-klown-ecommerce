@@ -1,6 +1,6 @@
 <template>
   <li
-    class="relative group w-[260px] h-[240px] rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition cursor-pointer"
+    class="relative group  h-[240px] rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition cursor-pointer"
     @click="$emit('click')"
   >
     <!-- Image de fond -->

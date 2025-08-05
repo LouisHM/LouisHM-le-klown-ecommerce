@@ -13,10 +13,8 @@ const messages = {
       intro: "Straight out of a horror movie, the Klown creates a dark universe on the border of Techno, Trance, and Rave, mixing distressing clusters and chilling bass kicks. Started in 2019, his red nose and balloons have traveled the globe with dates all over France as well as the United States, Italy, Turkey, Poland, and Spain. The Klown has established himself as a true showman, as technically talented as he is dynamic on stage. So? Do you also want a balloon?",
       bookMe: "Book me",
       seeLive: "See me live",
-      section1Title: "A Unique Style",
-      section1Text: "THE KLOWN blends underground rap, circus performances, and extravagant visuals.",
-      section2Title: "An Unforgettable Show",
-      section2Text: "Come see the show and experience something out of the ordinary!"
+      section1Title: "Total Immersion",
+      section1Text: "THE KLOWN presents his immersive 3D show during the \"Cirkus\" dates.",
     },
     shop: {
       title: 'Shop',
@@ -37,11 +35,31 @@ const messages = {
         upcoming: "Upcoming",
         past: "Past"
       },
+    form: {
+      title: "Contact LE KLOWN",
+      labels: {
+        name: "Name",
+        email: "Email",
+        subject: "Subject",
+        message: "Message"
+      },
+      placeholders: {
+        yourName: "Your name",
+        yourEmail: "Your email",
+        yourSubject: "Your subject",
+        yourMessage: "Your message"
+      },
+      button: "Send message",
+      loading: "Sending...",
+      success: "Message sent successfully!",
+      error: "An error occurred. Please try again."
+    },
     footer: {
-      reservation: "Reservation",
+      listenMe: "Listen to me on",
       followUs: "Follow me on",
       allRightsReserved: "All rights reserved",
       contact: "Contact",
+      contactMe: "Contact me",
     },
 
   },
@@ -58,10 +76,8 @@ const messages = {
       intro: "Tout droit sorti d’un film d’horreur, le KLOWN crée un univers sombre à la frontière de la Techno, de la Trance et du Rave, mêlant clusters angoissants et basses percutantes. Lancé en 2019, son nez rouge et ses ballons ont voyagé à travers le monde avec des dates partout en France ainsi qu’aux États-Unis, en Italie, en Turquie, en Pologne et en Espagne. Le KLOWN s’est imposé comme un véritable showman, aussi talentueux techniquement que dynamique sur scène. Alors ? Vous voulez aussi un ballon ?",
       bookMe: "Me booker",
       seeLive: "Me voir en live",
-      section1Title: "Un style unique",
-      section1Text: "Le KLOWN mélange rap underground, performances de cirque et visuels extravagants.",
-      section2Title: "Un show inoubliable",
-      section2Text: "Venez voir le spectacle et vivez une expérience hors du commun !"
+      section1Title: "Immersion Totale",
+      section1Text: "Le KLOWN présente son show 3D immersif lors des dates \"Cirkus\".",
     },
     shop: {
       title: 'Boutique',
@@ -82,11 +98,32 @@ const messages = {
         upcoming: "À venir",
         past: "Passés"
       },
+    form: {
+      title: "Contactez LE KLOWN",
+      labels: {
+        name: "Nom",
+        email: "Email",
+        subject: "Sujet",
+        message: "Message"
+      },
+      placeholders: {
+        yourName: "Votre nom",
+        yourEmail: "Votre email",
+        yourSubject: "Votre sujet",
+        yourMessage: "Votre message"
+      },
+      button: "Envoyer le message",
+      loading: "Envoi en cours...",
+      success: "Message envoyé avec succès !",
+      error: "Une erreur est survenue. Veuillez réessayer."
+    },
     footer: {
-      reservation: "Réservation",
+      listenMe: "Écoutez-moi sur",
       followUs: "Suivez-moi sur",
       allRightsReserved: "Tous droits réservés",
       contact: "Contact",
+      contactMe: "Contactez-moi",
+
     },
   }
 }
