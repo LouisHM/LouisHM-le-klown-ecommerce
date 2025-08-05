@@ -15,6 +15,8 @@ const messages = {
       seeLive: "See me live",
       section1Title: "Total Immersion",
       section1Text: "THE KLOWN presents his immersive 3D show during the \"Cirkus\" dates.",
+      errorVideo: "Your browser does not support HTML5 videos.",
+
     },
     shop: {
       title: 'Shop',
@@ -36,7 +38,10 @@ const messages = {
         past: "Past"
       },
     form: {
-      title: "Contact LE KLOWN",
+      titles: {
+        contact: "Contact LE KLOWN",
+        booking: "Book LE KLOWN"
+      },
       labels: {
         name: "Name",
         email: "Email",
@@ -78,6 +83,7 @@ const messages = {
       seeLive: "Me voir en live",
       section1Title: "Immersion Totale",
       section1Text: "Le KLOWN présente son show 3D immersif lors des dates \"Cirkus\".",
+      errorVideo: "Votre navigateur ne supporte pas les vidéos HTML5.",
     },
     shop: {
       title: 'Boutique',
@@ -99,7 +105,10 @@ const messages = {
         past: "Passés"
       },
     form: {
-      title: "Contactez LE KLOWN",
+      titles: {
+        contact: "Contact LE KLOWN",
+        booking: "Book LE KLOWN"
+      },
       labels: {
         name: "Nom",
         email: "Email",
