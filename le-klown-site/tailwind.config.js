@@ -21,9 +21,12 @@ export default {
         accent: '#5fc163',    
         dark: '#000000',      
         light: '#ffffff',
-        backgroundDark: '#1F1F1F', // gris clair
+        backgroundDark: '#111111', // gris clair
         text: '#333333',       // gris foncé      
         transparent: 'rgba(19, 18, 19, 0.9)',
+        success: '#28A745', // vert succès
+        warning: '#FFC107', // jaune avertissement
+        error: '#DC3545',   // rouge erreur
       },
       fontFamily: {
         sans: ['"Poppins"', 'sans-serif'],

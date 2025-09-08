@@ -1,9 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Home from './pages/Home.vue'
-import Events from './pages/Events.vue'
-import Shop from './pages/Shop.vue'
-import Admin from './pages/Admin.vue'
-import { role, fetchUserRole } from './composables/useAuth'
+import Home from '@/pages/Home.vue'
+import Events from '@/pages/Events.vue'
+import Shop from '@/pages/Shop.vue'
+import Admin from '@/pages/Admin.vue'
+import { role, fetchUserRole } from '@/composables/useAuth'
 
 const routes = [
   { path: '/', component: Home },

@@ -1,79 +1,195 @@
 <template>
-  <div class="pt-24 px-4 md:px-10 min-h-screen bg-dark text-light space-y-12">
-    <!-- ✅ Formulaire -->
-    <section class="bg-[#1a1a1a] border border-gray-700 rounded-lg p-6 max-w-3xl mx-auto shadow-lg">
-      <h2 class="text-2xl font-heading text-primary mb-6">Ajouter / Modifier un événement</h2>
+  <div class="pt-24 px-4 md:px-10 min-h-screen bg-dark text-light">
+    <!-- Mini-nav secondaire -->
+    <div class="flex space-x-4 justify-center">
+      <button
+        @click="mode = 'events'"
+        :class="mode === 'events' ? activeClass : inactiveClass"
+      >
+        {{ $t('admin.tabEvents') }}
+      </button>
+      <button
+        @click="mode = 'products'"
+        :class="mode === 'products' ? activeClass : inactiveClass"
+      >
+        {{ $t('admin.tabProducts') }}
+      </button>
+    </div>
 
-      <form @submit.prevent="saveEvent" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input v-model="newEvent.nom" type="text" placeholder="Nom de l’événement *" required class="form-input" />
-          <input v-model="newEvent.date" type="date" required class="form-input" />
-          <input v-model="newEvent.lieu" type="text" placeholder="Lieu *" required class="form-input" />
-          <input v-model="newEvent.prix_debut" type="number" placeholder="Prix de départ (€) *" required class="form-input" />
-          <input v-model="newEvent.image_url" type="url" placeholder="URL de l'image" class="form-input" />
-          <input v-model="newEvent.billeterie_url" type="url" placeholder="Lien billetterie" class="form-input" />
-          <input v-model="newEvent.insta_url" type="url" placeholder="Lien Instagram" class="form-input" />
-        </div>
-        <textarea v-model="newEvent.description" placeholder="Description (optionnel)" rows="4" class="form-textarea w-full" />
+    <!-- SECTION ÉVÉNEMENTS -->
+    <section v-if="mode === 'events'" class="space-y-12">
+      <AdminEventForm
+        :key="formEvent?.id || 'new-event'"
+        :event="formEvent"
+        @saved="onEventSaved"
+        class="max-w-3xl mx-auto"
+      />
 
-        <div class="flex space-x-4 mt-4">
-          <button type="submit" class="bg-primary text-dark px-6 py-2 rounded hover:bg-light font-semibold">
-            {{ editing ? 'Mettre à jour' : 'Ajouter' }}
-          </button>
-          <button v-if="editing" @click="resetForm" type="button" class="px-6 py-2 rounded border border-light hover:bg-gray-100">
-            Annuler
-          </button>
-        </div>
-      </form>
+      <!-- À venir -->
+      <h2 class="text-3xl font-heading text-light uppercase mb-6 text-start">{{ $t('events.upcoming') }}</h2>
+      <ul class="flex justify-center md:justify-start flex-wrap gap-4 mb-12">
+        <li
+          v-for="event in upcomingEvents"
+          :key="event.id"
+          class="relative"
+          @click="openModal(event)"
+        >
+          <!-- La carte n’intercepte pas les clics -->
+          <EventCard :event="event" class="pointer-events-none" />
+
+          <!-- Overlay actions -->
+          <div class="absolute top-2 right-2 z-50 flex gap-2 pointer-events-auto">
+            <button
+              @pointerdown.stop
+              @click.stop.prevent="editEvent(event)"
+              class="px-2 py-1 rounded-md bg-backgroundDark/80 border border-light/20 hover:bg-backgroundDark text-sm"
+            >
+              {{ $t('admin.edit') }}
+            </button>
+            <button
+              @pointerdown.stop
+              @click.stop.prevent="confirmDelete('event', event.id)"
+              class="px-2 py-1 rounded-md bg-red-600/90 hover:bg-red-600 text-light text-sm"
+            >
+              {{ $t('admin.delete') }}
+            </button>
+          </div>
+        </li>
+      </ul>
+
+      <!-- Passés -->
+      <h2 class="text-3xl font-heading text-light uppercase mb-6 text-start">{{ $t('events.past') }}</h2>
+      <ul class="flex justify-center md:justify-start flex-wrap gap-4">
+        <li
+          v-for="event in pastEvents"
+          :key="event.id"
+          class="relative grayscale opacity-60 hover:opacity-90 transition"
+          @click="openModal(event)"
+        >
+          <EventCard :event="event" class="pointer-events-none" />
+          <!-- Overlay actions -->
+          <div class="absolute top-2 right-2 z-50 flex gap-2 pointer-events-auto">
+            <button
+              @pointerdown.stop
+              @click.stop.prevent="editEvent(event)"
+              class="px-2 py-1 rounded-md bg-backgroundDark/80 border border-light/20 hover:bg-backgroundDark text-sm"
+            >
+              {{ $t('admin.edit') }}
+            </button>
+            <button
+              @pointerdown.stop
+              @click.stop.prevent="confirmDelete('event', event.id)"
+              class="px-2 py-1 rounded-md bg-red-600/90 hover:bg-red-600 text-light text-sm"
+            >
+              {{ $t('admin.delete') }}
+            </button>
+          </div>
+        </li>
+      </ul>
+
+      <!-- Modal Détails -->
+      <EventModal
+        v-if="modalEvent"
+        :event="modalEvent"
+        @close="modalEvent = null"
+      />
     </section>
 
-    <!-- À venir -->
-    <h2 class="text-3xl font-heading text-primary mb-6 text-start">{{ $t('events.upcoming') }}</h2>
-    <div class="grid justify-center gap-4 grid-cols-[repeat(auto-fit,_minmax(260px,_1fr))] mb-12">
-      <EventCard
-        v-for="event in aVenir"
-        :key="event.id"
-        :event="event"
-        :editable="true"
-        @click="openModal(event)"
-        @edit="editEvent"
-        @delete="confirmDelete"
+    <!-- SECTION PRODUITS -->
+    <section v-else class="space-y-12">
+      <!-- Formulaire Produits -->
+      <AdminProductForm
+        :key="selectedProduct?.id || 'new-product'"
+        :product="selectedProduct"
+        @saved="onProductSaved"
+        class="max-w-3xl mx-auto"
       />
-    </div>
 
-    <!-- Passés -->
-    <h2 class="text-3xl font-heading text-primary mb-6 text-start">{{ $t('events.past') }}</h2>
-    <div class="grid justify-center gap-4 grid-cols-[repeat(auto-fit,_minmax(260px,_1fr))]">
-      <div
-        v-for="event in passes"
-        :key="event.id"
-        class="grayscale opacity-60 hover:opacity-90 transition"
-      >
-        <EventCard
-          :event="event"
-          :editable="true"
-          @click="openModal(event)"
-          @edit="editEvent"
-          @delete="confirmDelete"
-        />
+      <!-- Liste Produits -->
+      <div>
+        <h2 class="text-3xl font-heading text-primary mb-6">{{ $t('shop.title') }}</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div
+            v-for="p in products"
+            :key="p.id"
+            class="bg-gray-800 p-4 rounded-lg flex flex-col border border-light/10"
+          >
+            <!-- Preview image -->
+            <div class="relative aspect-[4/3] bg-backgroundDark rounded-md overflow-hidden">
+              <img
+                v-if="firstImage(p)"
+                :src="firstImage(p)"
+                alt=""
+                class="w-full h-full object-cover"
+                @error="onImgError($event)"
+              />
+              <div v-else class="w-full h-full grid place-items-center text-xs opacity-60">
+                {{ $t('admin.noImage') || 'Aucune image' }}
+              </div>
+            </div>
+
+            <h3 class="mt-3 font-semibold text-lg">{{ p.name }}</h3>
+            <p class="text-sm text-gray-400 truncate">{{ p.description }}</p>
+            <div class="mt-2 flex-1">
+              <span class="font-bold">{{ (Number(p.price) || 0).toFixed(2) }} €</span>
+              <span
+                v-if="p.has_sizes"
+                class="ml-2 text-sm"
+              >{{ $t('admin.sizes') }}: {{ (p.sizes || []).join(', ') }}</span>
+            </div>
+
+            <!-- Thumbs si plusieurs images -->
+            <div v-if="(p.images || []).length > 1" class="mt-2 flex gap-2 overflow-x-auto">
+              <img
+                v-for="(img, i) in p.images"
+                :key="i"
+                :src="img"
+                class="w-12 h-12 rounded-md object-cover border border-light/10"
+                alt=""
+              />
+            </div>
+
+            <div class="flex gap-2 mt-4">
+              <button
+                @pointerdown.stop
+                @click.stop.prevent="editProduct(p)"
+                class="px-3 py-1 text-light border rounded hover:bg-light hover:text-dark transition"
+              >
+                {{ $t('admin.edit') }}
+              </button>
+              <button
+                @pointerdown.stop
+                @click.stop.prevent="confirmDelete('product', p.id)"
+                class="px-3 py-1 bg-primary text-dark rounded hover:opacity-90 transition"
+              >
+                {{ $t('admin.delete') }}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <!-- ✅ Modal détails -->
-    <EventModal
-      v-if="selectedEvent"
-      :event="selectedEvent"
-      @close="selectedEvent = null"
-    />
-
-    <!-- ✅ Modal confirmation delete -->
-    <div v-if="showConfirm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <!-- Modal confirmation delete -->
+    <div
+      v-if="showConfirm"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
       <div class="bg-light text-dark p-6 rounded-lg shadow-lg space-y-4 w-[90%] max-w-md">
-        <h2 class="text-2xl font-heading mb-4">Supprimer cet événement ?</h2>
-        <p>Cette action est irréversible.</p>
+        <h2 class="text-2xl font-heading mb-4">{{ $t('admin.confirmDelete') }}</h2>
         <div class="flex justify-end space-x-4 mt-6">
-          <button @click="showConfirm = false" class="px-4 py-2 rounded border border-dark hover:bg-gray-200">Annuler</button>
-          <button @click="deleteEvent" class="px-4 py-2 rounded bg-red-600 text-light hover:bg-dark">Confirmer</button>
+          <button
+            @click="showConfirm = false"
+            class="px-4 py-2 rounded border border-dark hover:bg-gray-200"
+          >
+            {{ $t('admin.cancel') }}
+          </button>
+          <button
+            @click="performDelete"
+            class="px-4 py-2 rounded bg-red-600 text-light hover:bg-dark"
+          >
+            {{ $t('admin.confirm') }}
+          </button>
         </div>
       </div>
     </div>
@@ -81,102 +197,104 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { supabase } from '../supabase/client'
-import EventCard from '../components/EventCard.vue'
-import EventModal from '../components/EventModal.vue'
+import { ref, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { supabase } from '@/supabase/client'
+import EventCard from '@/components/EventCard.vue'
+import AdminEventForm from '@/components/AdminEventForm.vue'
+import AdminProductForm from '@/components/AdminProductForm.vue'
+import EventModal from '@/components/EventModal.vue'
+import { useProducts, Product } from '@/composables/useProducts'
 
-const newEvent = ref({
-  id: null,
-  nom: '',
-  date: '',
-  lieu: '',
-  image_url: '',
-  billeterie_url: '',
-  insta_url: '',
-  prix_debut: null,
-  description: ''
-})
+// mode d’affichage
+const mode = ref<'events' | 'products'>('events')
+const { t } = useI18n()
 
-const editing = ref(false)
+// classes onglets
+const activeClass   = 'px-4 py-2 rounded-t-lg bg-gray-800 text-light font-semibold'
+const inactiveClass = 'px-4 py-2 rounded-t-lg bg-dark border-t border-r border-l border-light hover:bg-gray-700'
+
+// --- ÉVÉNEMENTS ---
 const events = ref<any[]>([])
-const aVenir = ref<any[]>([])
-const passes = ref<any[]>([])
-const showConfirm = ref(false)
-const deleteId = ref<number | null>(null)
-const selectedEvent = ref(null)
+const formEvent = ref<any|null>(null)   // ← édition
+const modalEvent = ref<any|null>(null)  // ← aperçu (modal)
 
+// fetch events
 async function fetchEvents() {
-  const { data } = await supabase.from('evenements').select('*').order('date', { ascending: true })
+  const { data } = await supabase
+    .from('evenements')
+    .select('*')
+    .order('date', { ascending: true })
   events.value = data || []
-
-  const today = new Date()
-  aVenir.value = events.value.filter(e => new Date(e.date) >= today)
-  passes.value = events.value.filter(e => new Date(e.date) < today)
 }
 
-function openModal(event: any) {
-  selectedEvent.value = event
+function editEvent(e: any) {
+  formEvent.value = { ...e }     // n’ouvre plus la modale
 }
 
-async function saveEvent() {
-  if (editing.value) {
-    const { error } = await supabase.from('evenements').update({
-      nom: newEvent.value.nom,
-      date: newEvent.value.date,
-      lieu: newEvent.value.lieu,
-      prix_debut: newEvent.value.prix_debut,
-      image_url: newEvent.value.image_url,
-      billeterie_url: newEvent.value.billeterie_url,
-      insta_url: newEvent.value.insta_url,
-      description: newEvent.value.description
-    }).eq('id', newEvent.value.id)
-
-    if (error) console.error('Update error:', error.message)
-  } else {
-    const { id, ...eventWithoutId } = newEvent.value
-    const { error } = await supabase.from('evenements').insert([eventWithoutId])
-    if (error) console.error('Insert error:', error.message)
-  }
-
-  await fetchEvents()
-  resetForm()
+function onEventSaved() {
+  formEvent.value = null
+  fetchEvents()
 }
 
-function confirmDelete(id: number) {
-  deleteId.value = id
+// --- PRODUITS ---
+const { products, fetchProducts, deleteProduct } = useProducts()
+const selectedProduct = ref<Product|null>(null)
+
+function editProduct(p: Product) {
+  selectedProduct.value = { ...p }
+}
+
+function onProductSaved() {
+  selectedProduct.value = null
+  fetchProducts()
+}
+
+// --- DELETE confirmation ---
+const showConfirm = ref(false)
+let deleteTarget: { type: 'event'|'product'; id: any } | null = null
+
+function confirmDelete(type: 'event'|'product', id: any) {
+  deleteTarget = { type, id }
   showConfirm.value = true
 }
 
-async function deleteEvent() {
-  if (deleteId.value !== null) {
-    const { error } = await supabase.from('evenements').delete().eq('id', deleteId.value)
-    if (error) console.error('Delete error:', error.message)
-    await fetchEvents()
+async function performDelete() {
+  if (!deleteTarget) return
+  if (deleteTarget.type === 'event') {
+    await supabase.from('evenements').delete().eq('id', deleteTarget.id)
+    fetchEvents()
+  } else {
+    await deleteProduct(deleteTarget.id)
+    fetchProducts()
   }
   showConfirm.value = false
-  deleteId.value = null
+  deleteTarget = null
 }
 
-function editEvent(event: any) {
-  newEvent.value = { ...event }
-  editing.value = true
-}
+// initialisation
+onMounted(() => {
+  fetchEvents()
+  fetchProducts()
+})
 
-function resetForm() {
-  newEvent.value = {
-    id: null,
-    nom: '',
-    date: '',
-    lieu: '',
-    image_url: '',
-    billeterie_url: '',
-    insta_url: '',
-    prix_debut: null,
-    description: ''
-  }
-  editing.value = false
-}
+// Tris + modal
+const now = new Date().getTime()
+const upcomingEvents = computed(() =>
+  events.value.filter(e => new Date(e.date).getTime() >= now)
+)
+const pastEvents = computed(() =>
+  events.value.filter(e => new Date(e.date).getTime() < now).reverse()
+)
+function openModal(event: any) { modalEvent.value = event }
 
-onMounted(fetchEvents)
+// --- Helpers images produits ---
+function firstImage(p: any): string | null {
+  const imgs = Array.isArray(p?.images) ? p.images : []
+  return imgs.find((u: string) => !!u) || null
+}
+function onImgError(ev: Event) {
+  const el = ev.target as HTMLImageElement
+  el.style.display = 'none'
+}
 </script>

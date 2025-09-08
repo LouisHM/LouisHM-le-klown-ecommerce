@@ -2,7 +2,7 @@
   <div class="pt-24 max-w-7xl flex flex-col align-center justify-center px-4 text-light bg-dark mx-auto">
     <!-- À venir -->
     <h2 class="text-3xl font-heading text-light uppercase mb-6 text-start">{{ $t('events.upcoming') }}</h2>
-    <ul class="grid justify-center gap-4 grid-cols-[repeat(auto-fit,_minmax(260px,_1fr))] mb-12">
+    <ul class="flex justify-center md:justify-start flex-wrap gap-4 mb-12">
       <EventCard
         v-for="event in upcomingEvents"
         :key="event.id"
@@ -13,7 +13,7 @@
 
     <!-- Passés -->
     <h2 class="text-3xl font-heading text-light uppercase mb-6 text-start">{{ $t('events.past') }}</h2>
-    <div class="grid justify-center gap-4 grid-cols-[repeat(auto-fit,_minmax(260px,_1fr))]">
+    <div class="flex justify-center md:justify-start flex-wrap gap-4">
       <ul
         v-for="event in pastEvents"
         :key="event.id"
@@ -37,9 +37,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { supabase } from '../supabase/client'
-import EventCard from '../components/EventCard.vue'
-import EventModal from '../components/EventModal.vue'
+import { supabase } from '@/supabase/client'
+import EventCard from '@/components/EventCard.vue'
+import EventModal from '@/components/EventModal.vue'
 
 const events = ref<any[]>([])
 const selectedEvent = ref(null)

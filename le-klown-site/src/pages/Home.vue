@@ -9,7 +9,8 @@
         class="absolute inset-0 w-full h-full object-cover brightness-[0.4]"
       >
         <source src="/assets/videos/show1.mp4" type="video/mp4" />
-        Votre navigateur ne supporte pas les vidéos HTML5.
+        {{ $t('home.errorVideo') }}
+
       </video>
 
       <!-- Overlay + texte + boutons -->
@@ -78,7 +79,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import ContactModal from '../components/ContactModal.vue'
+import ContactModal from '@/components/ContactModal.vue'
 
 const showContact = ref(false)
 

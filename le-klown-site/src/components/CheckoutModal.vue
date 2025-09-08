@@ -169,7 +169,7 @@ import { toUnitPriceEUR } from '@/utils/price'
 
 const { t } = useI18n()
 
-/** Props / Emits */
+// ✅ capture props as 'props' (you referenced props.visible/props.cartItems)
 const props = defineProps<{
   visible: boolean
   cartItems: Array<{
@@ -177,9 +177,7 @@ const props = defineProps<{
     quantity: number
     name: string
     size?: string
-    image?: string
   }>
-  /** Optional: your address to receive a copy (if you configure EmailJS to route with `to_email`) */
   klownEmail?: string
 }>()
 
@@ -188,11 +186,11 @@ const emit = defineEmits<{
   (e: 'success', payload: { orderRef: string }): void
 }>()
 
-/** Constants (match your UI and email) */
+// Constants
 const FREE_SHIPPING_THRESHOLD = 25
 const SHIPPING_FEE = 3
 
-/** Form state */
+// Form state
 const form = reactive({
   lastName: '',
   firstName: '',
@@ -205,31 +203,35 @@ const form = reactive({
 const submitting = ref(false)
 const error = ref<string | null>(null)
 
-/** Focus & scroll lock */
+// Focus on open + lock scroll
 const panel = ref<HTMLElement | null>(null)
 watch(() => props.visible, (v) => {
   document.documentElement.style.overflow = v ? 'hidden' : ''
   if (v) requestAnimationFrame(() => panel.value?.focus())
 })
-onMounted(() => { if (props.visible) panel.value?.focus() })
-onBeforeUnmount(() => { document.documentElement.style.overflow = '' })
+onMounted(() => {
+  if (props.visible) panel.value?.focus()
+})
+onBeforeUnmount(() => {
+  document.documentElement.style.overflow = ''
+})
 
-/** Helpers */
+// Helpers
 function priceNum(raw: any) {
-  try { return Number(toUnitPriceEUR ? toUnitPriceEUR(raw) : Number(raw)) || 0 }
-  catch { return Number(raw) || 0 }
+  // keep robust even if helper changes or numeric returns string
+  try { return Number(toUnitPriceEUR ? toUnitPriceEUR(raw) : Number(raw)) || 0 } catch { return Number(raw) || 0 }
 }
 function lineTotal(it: { price: any; quantity: number }) {
   return priceNum(it.price) * Math.max(1, Number(it.quantity) || 1)
 }
 function formatPrice(n: number) { return n.toFixed(2) }
 
-/** Totals */
-const subtotal = computed(() => props.cartItems.reduce((s, it) => s + lineTotal(it), 0))
+const subtotal = computed(() =>
+  props.cartItems.reduce((s, it) => s + lineTotal(it), 0)
+)
 const shipping = computed(() => (subtotal.value >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE))
 const total = computed(() => subtotal.value + shipping.value)
 
-/** Validation */
 const isValid = computed(() =>
   !!form.lastName &&
   !!form.firstName &&
@@ -238,43 +240,15 @@ const isValid = computed(() =>
   /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)
 )
 
-/** UI actions */
+// Actions
 function onClose() { emit('close') }
+
 function buildOrderRef() {
   const now = new Date()
   return `KLOWN-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
 }
 
-/** HTML helpers for EmailJS template */
-function escapeHtml(s: string) {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-}
-function itemsHtml(items: typeof props.cartItems) {
-  // Small, inline-styled rows that fit your template
-  const rows = items.map((it) => {
-    const qty = Math.max(1, Number(it.quantity) || 1)
-    const price = priceNum(it.price)
-    const size = it.size ? ` (${escapeHtml(it.size)})` : ''
-    const name = escapeHtml(it.name)
-    const line = (price * qty).toFixed(2)
-    return `
-      <tr>
-        <td style="padding:6px 0; color:#111;">${name}${size} &times; ${qty}</td>
-        <td style="padding:6px 0;" align="right">${line} €</td>
-      </tr>
-    `
-  }).join('')
-  return `
-    <table cellspacing="0" cellpadding="0" width="100%" style="border-collapse:collapse; font-size:14px;">
-      ${rows}
-    </table>
-  `
-}
-
-/** Submit with EmailJS REST API, using YOUR template variables */
+// Replace with your real EmailJS call
 async function submit() {
   error.value = null
   if (!isValid.value) {
@@ -286,61 +260,72 @@ async function submit() {
     return
   }
 
-  const serviceId  = import.meta.env.VITE_EMAILJS_SERVICE_ID
-  const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_ORDER
-  const userId     = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-  if (!serviceId || !templateId || !userId) {
-    error.value = 'EmailJS is not configured (env vars missing).'
+  const service_id  = import.meta.env.VITE_EMAILJS_SERVICE_ID
+  const template_id = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_ORDER
+  const user_id     = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+
+  if (!service_id || !template_id || !user_id) {
+    error.value = 'EmailJS is not configured (missing env vars).'
     return
+  }
+
+  // build order ref
+  const orderRef = buildOrderRef()
+
+  // normalize items and flatten (max 10 lines)
+  const MAX_LINES = 10
+  const norm = props.cartItems.map((it) => {
+    const qty = Math.max(1, Number(it.quantity) || 1)
+    const price = priceNum(it.price)
+    const lineTotal = (qty * price).toFixed(2)
+    const label = `${it.name}${it.size ? ' (' + it.size + ')' : ''} × ${qty}`
+    return { label, line: lineTotal }
+  })
+
+  const flattened: Record<string, string> = {}
+  norm.slice(0, MAX_LINES).forEach((row, i) => {
+    const idx = i + 1 // 1-based to keep it human friendly
+    flattened[`item${idx}_label`] = row.label
+    flattened[`item${idx}_total_eur`] = row.line
+  })
+  flattened.items_count = String(norm.length)
+
+  const template_params = {
+    // meta
+    order_ref: orderRef,
+    now: new Date().toLocaleString('fr-FR'),
+
+    // totals
+    subtotal_eur: subtotal.value.toFixed(2),
+    shipping_eur: shipping.value.toFixed(2),
+    total_eur: total.value.toFixed(2),
+    shipping_policy_text: 'Expédition sous 2–5 jours ouvrés',
+    free_shipping_threshold_eur: FREE_SHIPPING_THRESHOLD.toFixed(2),
+
+    // customer
+    customer_firstname: form.firstName,
+    customer_fullname: `${form.firstName} ${form.lastName}`.trim(),
+    customer_email: form.email,
+    customer_address: form.address,
+    customer_phone: form.phone || '',
+    customer_instagram: form.instagram || '',
+
+    // notes
+    order_notes: form.notes || '',
+
+    // who to reply to
+    reply_to: form.email,
+
+    // flattened items
+    ...flattened,
   }
 
   submitting.value = true
   try {
-    const orderRef = buildOrderRef()
-    const nowStr = new Date().toLocaleString('fr-FR') // you can change locale if you want
-
-    /** Match EXACTLY your EmailJS template fields */
-    const template_params: Record<string, any> = {
-      // who receives the email — only if your EmailJS template uses `to_email` as a dynamic recipient field
-      to_email: form.email,                    // send confirmation to customer
-      // to_email: props.klownEmail || 'you@domain.com', // (alt) send to you instead
-
-      // header / meta
-      order_ref: orderRef,
-      now: nowStr,
-
-      // items & totals
-      items_html: itemsHtml(props.cartItems),                   // HTML block
-      subtotal_eur: formatPrice(subtotal.value),
-      shipping_eur: formatPrice(shipping.value),
-      total_eur: formatPrice(total.value),
-      shipping_policy_text: 'Expédition sous 2–5 jours ouvrés',
-      free_shipping_threshold_eur: formatPrice(FREE_SHIPPING_THRESHOLD),
-
-      // customer
-      customer_firstname: form.firstName,
-      customer_fullname: `${form.firstName} ${form.lastName}`.trim(),
-      customer_email: form.email,
-      customer_address: form.address,
-      customer_phone: form.phone || '-',
-      customer_instagram: form.instagram || '-',
-
-      // notes
-      order_notes: form.notes || '-',
-
-      // helps replies
-      reply_to: form.email
-    }
-
     const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service_id: serviceId,
-        template_id: templateId,
-        user_id: userId,
-        template_params
-      })
+      body: JSON.stringify({ service_id, template_id, user_id, template_params })
     })
 
     if (!res.ok) {
@@ -350,13 +335,15 @@ async function submit() {
 
     emit('success', { orderRef })
     onClose()
-  } catch (e: any) {
+  } catch (e:any) {
     console.error(e)
     error.value = t('form.error') || (e?.message ?? 'Une erreur est survenue. Réessaie.')
   } finally {
     submitting.value = false
   }
 }
+
+
 </script>
 
 <style scoped>

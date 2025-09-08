@@ -12,11 +12,11 @@
       <!-- Logo -->
       <div class="flex items-center text-3xl font-heading tracking-wide">
         <img src="../../public/assets/img/logo-klown.png" alt="LE KLOWN" width="50" class="inline-block mr-2" />
-        <span>LE KLOWN</span>
+        <span class="text-light text-">LE KLOWN</span>
       </div>
 
       <!-- Desktop navigation -->
-      <div class="hidden md:flex justify-center gap-4 text-base flex-1">
+      <div class="hidden lg:flex justify-center gap-4 text-base flex-1">
         <RouterLink
           v-for="item in filteredLinks"
           :key="item.path"
@@ -32,10 +32,14 @@
             }"
           ></span>
         </RouterLink>
+        <!-- Bouton panier -->
+
+<!-- Composant Cart -->
+<Cart v-if="showCart" @close="showCart = false" />
       </div>
 
       <!-- Right zone: Auth & Lang -->
-      <div class="hidden md:flex items-center gap-4 ml-4">
+      <div class="hidden lg:flex items-center gap-4 ml-4">
         <AuthButton @auth-changed="updateUserRole" />
         <div class="relative">
           <button @click="langMenu = !langMenu" class="flex items-center px-3 py-1 rounded-full hover:bg-gray-700 transition focus:outline-none text-sm">
@@ -52,7 +56,7 @@
         </div>
       </div>
     <!-- Burger menu -->
-    <button @click="isOpen = !isOpen" class="md:hidden focus:outline-none relative w-8 h-8 z-50 group">
+    <button @click="isOpen = !isOpen" class="lg:hidden focus:outline-none relative w-8 h-8 z-50 group">
       <span
         :class="[
           'block absolute h-[3px] w-full bg-light transition-all duration-300 ease-in-out',
@@ -108,11 +112,18 @@
 import { ref, computed, watchEffect, onMounted, onUnmounted  } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
-import AuthButton from './AuthButton.vue'
-import { fetchUserRole, role } from '../composables/useAuth'
+import AuthButton from '@/components/AuthButton.vue'
+import { fetchUserRole, role } from '@/composables/useAuth'
+import { useCart } from '@/composables/useCart'
 
+import Cart from '@/components/Cart.vue'
+
+const showCart = ref(false)
 const showNavbar = ref(false)
 const isScrolled = ref(false)
+const { items } = useCart()
+const cartCount = computed(() => items.value.reduce((sum, i) => sum + i.quantity, 0))
+
 
 function handleScroll() {
   const y = window.scrollY

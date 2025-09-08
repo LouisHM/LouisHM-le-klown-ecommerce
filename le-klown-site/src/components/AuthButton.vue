@@ -47,10 +47,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { supabase } from '../supabase/client'
+import { supabase } from '@/supabase/client'
 import logoutSvg from '/assets/svg/logout.svg?raw'
 import { useRouter, useRoute } from 'vue-router'
-import { role, fetchUserRole, signOut } from '../composables/useAuth'
+import { role, fetchUserRole, signOut } from '@/composables/useAuth'
 
 const emit = defineEmits(['auth-changed'])
 const router = useRouter()
