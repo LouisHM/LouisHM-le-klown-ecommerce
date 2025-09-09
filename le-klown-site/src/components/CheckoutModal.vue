@@ -178,7 +178,6 @@ const props = defineProps<{
     name: string
     size?: string
   }>
-  klownEmail?: string
 }>()
 
 const emit = defineEmits<{
@@ -248,7 +247,6 @@ function buildOrderRef() {
   return `KLOWN-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
 }
 
-// Replace with your real EmailJS call
 async function submit() {
   error.value = null
   if (!isValid.value) {
@@ -263,34 +261,37 @@ async function submit() {
   const service_id  = import.meta.env.VITE_EMAILJS_SERVICE_ID
   const template_id = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_ORDER
   const user_id     = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-
   if (!service_id || !template_id || !user_id) {
     error.value = 'EmailJS is not configured (missing env vars).'
     return
   }
 
-  // build order ref
+  // — Build unlimited rows HTML —
+  const esc = (s: any) => String(s ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+
+  const rows = props.cartItems.map((it) => {
+    const qty   = Math.max(1, Number(it.quantity) || 1)
+    const price = priceNum(it.price)
+    const line  = (qty * price).toFixed(2)
+    const label = `${esc(it.name)}${it.size ? ' (' + esc(it.size) + ')' : ''} × ${qty}`
+    return `<tr>
+      <td style="padding:6px 0; color:#111;">${label}</td>
+      <td style="padding:6px 0;" align="right">${line} €</td>
+    </tr>`
+  }).join('')
+
+  const items_html = `<table cellspacing="0" cellpadding="0" width="100%" style="border-collapse:collapse; font-size:14px;">${rows}</table>`
+
   const orderRef = buildOrderRef()
 
-  // normalize items and flatten (max 10 lines)
-  const MAX_LINES = 10
-  const norm = props.cartItems.map((it) => {
-    const qty = Math.max(1, Number(it.quantity) || 1)
-    const price = priceNum(it.price)
-    const lineTotal = (qty * price).toFixed(2)
-    const label = `${it.name}${it.size ? ' (' + it.size + ')' : ''} × ${qty}`
-    return { label, line: lineTotal }
-  })
+  // IMPORTANT:
+  // - In EmailJS template, set "To" = {{to_email}}
+  // - Here, send your seller inbox; keep buyer as reply_to
 
-  const flattened: Record<string, string> = {}
-  norm.slice(0, MAX_LINES).forEach((row, i) => {
-    const idx = i + 1 // 1-based to keep it human friendly
-    flattened[`item${idx}_label`] = row.label
-    flattened[`item${idx}_total_eur`] = row.line
-  })
-  flattened.items_count = String(norm.length)
+  const template_params = {                  // 👈 must match template To = {{to_email}}
+    to_email: form.email,             // buyer email for easy reply
 
-  const template_params = {
     // meta
     order_ref: orderRef,
     now: new Date().toLocaleString('fr-FR'),
@@ -313,11 +314,8 @@ async function submit() {
     // notes
     order_notes: form.notes || '',
 
-    // who to reply to
-    reply_to: form.email,
-
-    // flattened items
-    ...flattened,
+    // items table (render with triple braces {{{items_html}}} in the template)
+    items_html
   }
 
   submitting.value = true
@@ -327,11 +325,7 @@ async function submit() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ service_id, template_id, user_id, template_params })
     })
-
-    if (!res.ok) {
-      const msg = await res.text().catch(() => '')
-      throw new Error(`EmailJS error: ${res.status} ${msg}`)
-    }
+    if (!res.ok) throw new Error(`EmailJS error: ${res.status} ${await res.text().catch(()=> '')}`)
 
     emit('success', { orderRef })
     onClose()
@@ -342,6 +336,7 @@ async function submit() {
     submitting.value = false
   }
 }
+
 
 
 </script>

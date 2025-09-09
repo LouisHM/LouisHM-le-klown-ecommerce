@@ -1,373 +1,131 @@
 <template>
-  <Teleport to="body">
-    <transition name="fade">
-      <div
-        v-if="visible"
-        class="fixed inset-0 z-[10050] bg-black/70 flex items-end md:items-center justify-center p-0 md:p-6"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="t('checkout.title')"
-        @click="onClose"
-        @keydown.esc.prevent="onClose"
-      >
-        <div
-          class="w-full h-[100dvh] md:h-auto md:max-h-[85vh] md:max-w-2xl bg-dark text-light md:rounded-2xl shadow-xl overflow-y-auto outline-none"
-          @click.stop
-          tabindex="-1"
-          ref="panel"
-        >
-          <!-- Header -->
-          <div class="flex items-center justify-between px-5 py-4 border-b border-light/10">
-            <h2 class="text-xl md:text-2xl font-heading uppercase">
-              {{ t('checkout.title') }}
-            </h2>
-            <button @click="onClose" :aria-label="t('common.close')" class="text-2xl hover:text-primary">&times;</button>
-          </div>
+  <form
+    @submit.prevent="handleSubmit"
+    class="text-light p-4 rounded-2xl shadow-2xl w-full max-w-xl space-y-6"
+  >
+    <h2 class="text-3xl font-heading text-center text-primary mb-6">
+      {{ t('form.title') }}
+    </h2>
 
-          <!-- Body -->
-          <div class="p-5 md:p-6 space-y-6">
-            <!-- Récap Panier -->
-            <div class="bg-backgroundDark/60 rounded-xl p-4 border border-light/10">
-              <h3 class="font-semibold mb-3">{{ t('checkout.cartTitle') }}</h3>
-              <ul class="space-y-2 text-sm">
-                <li v-for="(it, i) in cartItems" :key="i" class="flex justify-between gap-2">
-                  <span class="truncate">
-                    {{ it.name }}
-                    <template v-if="it.size"> — {{ it.size }}</template>
-                    × {{ it.quantity }}
-                  </span>
-                  <span class="whitespace-nowrap">{{ formatPrice(lineTotal(it)) }} €</span>
-                </li>
-              </ul>
-              <div class="h-px bg-light/10 my-3"></div>
-              <div class="flex justify-between text-sm">
-                <span>{{ t('checkout.subtotal') }}</span>
-                <span>{{ formatPrice(subtotal) }} €</span>
-              </div>
-              <div class="flex justify-between text-sm">
-                <span>{{ t('checkout.shipping') }}</span>
-                <span>{{ formatPrice(shipping) }} €</span>
-              </div>
-              <div class="flex justify-between font-semibold text-lg mt-1">
-                <span>{{ t('checkout.total') }}</span>
-                <span>{{ formatPrice(total) }} €</span>
-              </div>
-              <p class="text-xs opacity-70 mt-2">
-                {{ t('checkout.freeShippingNote', { amount: formatPrice(FREE_SHIPPING_THRESHOLD) }) }}
-              </p>
-            </div>
-
-            <!-- Formulaire Client (obligatoires marqués *) -->
-            <form @submit.prevent="submit" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm mb-1">
-                  {{ t('checkout.lastName') }} <span class="text-red-400">*</span>
-                </label>
-                <input
-                  v-model.trim="form.lastName"
-                  class="w-full rounded-lg p-2 bg-backgroundDark border border-light/10"
-                  :placeholder="t('checkout.lastName_ph')"
-                  required
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm mb-1">
-                  {{ t('checkout.firstName') }} <span class="text-red-400">*</span>
-                </label>
-                <input
-                  v-model.trim="form.firstName"
-                  class="w-full rounded-lg p-2 bg-backgroundDark border border-light/10"
-                  :placeholder="t('checkout.firstName_ph')"
-                  required
-                />
-              </div>
-
-              <div class="md:col-span-2">
-                <label class="block text-sm mb-1">
-                  {{ t('checkout.address') }} <span class="text-red-400">*</span>
-                </label>
-                <textarea
-                  v-model.trim="form.address"
-                  rows="3"
-                  class="w-full rounded-lg p-2 bg-backgroundDark border border-light/10"
-                  :placeholder="t('checkout.address_ph')"
-                  required
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm mb-1">
-                  {{ t('checkout.email') }} <span class="text-red-400">*</span>
-                </label>
-                <input
-                  v-model.trim="form.email"
-                  type="email"
-                  class="w-full rounded-lg p-2 bg-backgroundDark border border-light/10"
-                  :placeholder="t('checkout.email_ph')"
-                  required
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm mb-1">{{ t('checkout.phone') }}</label>
-                <input
-                  v-model.trim="form.phone"
-                  type="tel"
-                  class="w-full rounded-lg p-2 bg-backgroundDark border border-light/10"
-                  :placeholder="t('checkout.phone_ph')"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm mb-1">{{ t('checkout.instagram') }}</label>
-                <input
-                  v-model.trim="form.instagram"
-                  class="w-full rounded-lg p-2 bg-backgroundDark border border-light/10"
-                  :placeholder="t('checkout.instagram_ph')"
-                />
-              </div>
-
-              <div class="md:col-span-2">
-                <label class="block text-sm mb-1">{{ t('checkout.notes') }}</label>
-                <textarea
-                  v-model.trim="form.notes"
-                  rows="3"
-                  class="w-full rounded-lg p-2 bg-backgroundDark border border-light/10"
-                  :placeholder="t('checkout.notes_ph')"
-                />
-              </div>
-
-              <div v-if="error" class="md:col-span-2 text-red-300 text-sm">
-                {{ error }}
-              </div>
-
-              <div class="md:col-span-2 flex items-center justify-end gap-3">
-                <button type="button" class="px-4 py-2 rounded-xl bg-backgroundDark border border-light/10" @click="onClose">
-                  {{ t('common.cancel') }}
-                </button>
-                <button
-                  type="submit"
-                  :disabled="submitting || !isValid || cartItems.length === 0"
-                  class="px-5 py-2 rounded-xl bg-primary text-dark font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {{ submitting ? t('checkout.sending') : t('checkout.confirm') }}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+    <div class="flex flex-col md:flex-row gap-4">
+      <div class="flex-1 flex flex-col gap-2">
+        <label for="name" class="font-semibold text-left">
+          {{ t('form.labels.name') }}
+        </label>
+        <input
+          v-model="form.name"
+          type="text"
+          id="name"
+          name="name"
+          required
+          class="w-full px-4 py-3 rounded-lg focus:ring-2 text-dark focus:ring-primary focus:outline-none transition text-sm"
+          :placeholder="t('form.placeholders.yourName')"
+        />
       </div>
-    </transition>
-  </Teleport>
+
+      <div class="flex-1 flex flex-col gap-2">
+        <label for="email" class="font-semibold text-left">
+          {{ t('form.labels.email') }}
+        </label>
+        <input
+          v-model="form.email"
+          type="email"
+          id="email"
+          name="email"
+          required
+          :placeholder="t('form.placeholders.yourEmail')"
+          class="w-full px-4 py-3 rounded-lg focus:ring-2 text-dark focus:ring-primary focus:outline-none transition text-sm"
+        />
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label for="subject" class="font-semibold text-left">
+        {{ t('form.labels.subject') }}
+      </label>
+      <input
+        v-model="form.subject"
+        type="text"
+        id="subject"
+        name="subject"
+        required
+        :placeholder="t('form.placeholders.yourSubject')"
+        class="w-full px-4 py-3 rounded-lg focus:ring-2 text-dark focus:ring-primary focus:outline-none transition text-sm"
+      />
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label for="message" class="font-semibold text-left">
+        {{ t('form.labels.message') }}
+      </label>
+      <textarea
+        v-model="form.message"
+        id="message"
+        name="message"
+        required
+        rows="5"
+        :placeholder="t('form.placeholders.yourMessage')"
+        class="w-full px-4 py-3 rounded-lg focus:ring-2 text-dark focus:ring-primary focus:outline-none transition text-sm"
+      ></textarea>
+    </div>
+
+    <button
+      type="submit"
+      class="w-full py-3 rounded-lg bg-primary text-white font-semibold text-lg tracking-wide hover:bg-light hover:text-dark transition duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+      :disabled="loading"
+    >
+      {{ loading ? t('form.loading') : t('form.button') }}
+    </button>
+
+    <p v-if="success" class="text-green-600 text-center text-sm mt-2">
+      ✅ {{ t('form.success') }}
+    </p>
+    <p v-if="error" class="text-red-600 text-center text-sm mt-2">
+      ❌ {{ t('form.error') }}
+    </p>
+  </form>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { toUnitPriceEUR } from '@/utils/price'
-
 const { t } = useI18n()
 
-/** Props / Emits */
-const props = defineProps<{
-  visible: boolean
-  cartItems: Array<{
-    price: number | string
-    quantity: number
-    name: string
-    size?: string
-    image?: string
-  }>
-  /** Optional: your address to receive a copy (if you configure EmailJS to route with `to_email`) */
-  klownEmail?: string
-}>()
+const form = ref({ name: '', email: '', subject: '', message: '' })
+const loading = ref(false)
+const success = ref(false)
+const error = ref(false)
 
-const emit = defineEmits<{
-  (e: 'close'): void
-  (e: 'success', payload: { orderRef: string }): void
-}>()
+async function handleSubmit() {
+  loading.value = true
+  success.value = false
+  error.value = false
 
-/** Constants (match your UI and email) */
-const FREE_SHIPPING_THRESHOLD = 25
-const SHIPPING_FEE = 3
-
-/** Form state */
-const form = reactive({
-  lastName: '',
-  firstName: '',
-  address: '',
-  email: '',
-  phone: '',
-  instagram: '',
-  notes: ''
-})
-const submitting = ref(false)
-const error = ref<string | null>(null)
-
-/** Focus & scroll lock */
-const panel = ref<HTMLElement | null>(null)
-watch(() => props.visible, (v) => {
-  document.documentElement.style.overflow = v ? 'hidden' : ''
-  if (v) requestAnimationFrame(() => panel.value?.focus())
-})
-onMounted(() => { if (props.visible) panel.value?.focus() })
-onBeforeUnmount(() => { document.documentElement.style.overflow = '' })
-
-/** Helpers */
-function priceNum(raw: any) {
-  try { return Number(toUnitPriceEUR ? toUnitPriceEUR(raw) : Number(raw)) || 0 }
-  catch { return Number(raw) || 0 }
-}
-function lineTotal(it: { price: any; quantity: number }) {
-  return priceNum(it.price) * Math.max(1, Number(it.quantity) || 1)
-}
-function formatPrice(n: number) { return n.toFixed(2) }
-
-/** Totals */
-const subtotal = computed(() => props.cartItems.reduce((s, it) => s + lineTotal(it), 0))
-const shipping = computed(() => (subtotal.value >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE))
-const total = computed(() => subtotal.value + shipping.value)
-
-/** Validation */
-const isValid = computed(() =>
-  !!form.lastName &&
-  !!form.firstName &&
-  !!form.email &&
-  !!form.address &&
-  /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)
-)
-
-/** UI actions */
-function onClose() { emit('close') }
-function buildOrderRef() {
-  const now = new Date()
-  return `KLOWN-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
-}
-
-/** HTML helpers for EmailJS template */
-function escapeHtml(s: string) {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-}
-function itemsHtml(items: typeof props.cartItems) {
-  // Small, inline-styled rows that fit your template
-  const rows = items.map((it) => {
-    const qty = Math.max(1, Number(it.quantity) || 1)
-    const price = priceNum(it.price)
-    const size = it.size ? ` (${escapeHtml(it.size)})` : ''
-    const name = escapeHtml(it.name)
-    const line = (price * qty).toFixed(2)
-    return `
-      <tr>
-        <td style="padding:6px 0; color:#111;">${name}${size} &times; ${qty}</td>
-        <td style="padding:6px 0;" align="right">${line} €</td>
-      </tr>
-    `
-  }).join('')
-  return `
-    <table cellspacing="0" cellpadding="0" width="100%" style="border-collapse:collapse; font-size:14px;">
-      ${rows}
-    </table>
-  `
-}
-
-/** Submit with EmailJS REST API, using YOUR template variables */
-async function submit() {
-  error.value = null
-  if (!isValid.value) {
-    error.value = t('form.error') || 'Merci de remplir les champs obligatoires (*) avec un email valide.'
-    return
-  }
-  if (!props.cartItems.length) {
-    error.value = t('cart.empty') || 'Ton panier est vide.'
-    return
-  }
-
-  const serviceId  = import.meta.env.VITE_EMAILJS_SERVICE_ID
-  const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_ORDER
-  const userId     = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-  if (!serviceId || !templateId || !userId) {
-    error.value = 'EmailJS is not configured (env vars missing).'
-    return
-  }
-
-  submitting.value = true
   try {
-    const orderRef = buildOrderRef()
-    const nowStr = new Date().toLocaleString('fr-FR') // you can change locale if you want
-
-    /** Match EXACTLY your EmailJS template fields */
-    const template_params: Record<string, any> = {
-      // who receives the email — only if your EmailJS template uses `to_email` as a dynamic recipient field
-      to_email: form.email,                    // send confirmation to customer
-      // to_email: props.klownEmail || 'you@domain.com', // (alt) send to you instead
-
-      // header / meta
-      order_ref: orderRef,
-      now: nowStr,
-
-      // items & totals
-      items_html: itemsHtml(props.cartItems),                   // HTML block
-      subtotal_eur: formatPrice(subtotal.value),
-      shipping_eur: formatPrice(shipping.value),
-      total_eur: formatPrice(total.value),
-      shipping_policy_text: 'Expédition sous 2–5 jours ouvrés',
-      free_shipping_threshold_eur: formatPrice(FREE_SHIPPING_THRESHOLD),
-
-      // customer
-      customer_firstname: form.firstName,
-      customer_fullname: `${form.firstName} ${form.lastName}`.trim(),
-      customer_email: form.email,
-      customer_address: form.address,
-      customer_phone: form.phone || '-',
-      customer_instagram: form.instagram || '-',
-
-      // notes
-      order_notes: form.notes || '-',
-
-      // helps replies
-      reply_to: form.email
-    }
-
     const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        service_id: serviceId,
-        template_id: templateId,
-        user_id: userId,
-        template_params
-      })
+        service_id: import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        template_id: import.meta.env.VITE_EMAILJS_TEMPLATE_ID_CONTACT,
+        user_id: import.meta.env.VITE_EMAILJS_PUBLIC_KEY,
+        template_params: {
+          from_name: form.value.name,
+          from_email: form.value.email,
+          subject: form.value.subject,
+          message: form.value.message,
+          email_time: new Date().toLocaleTimeString(),
+        },
+      }),
     })
-
-    if (!res.ok) {
-      const msg = await res.text().catch(() => '')
-      throw new Error(`EmailJS error: ${res.status} ${msg}`)
-    }
-
-    emit('success', { orderRef })
-    onClose()
-  } catch (e: any) {
+    if (!res.ok) throw new Error(await res.text())
+    success.value = true
+    form.value = { name: '', email: '', subject: '', message: '' }
+  } catch (e) {
     console.error(e)
-    error.value = t('form.error') || (e?.message ?? 'Une erreur est survenue. Réessaie.')
+    error.value = true
   } finally {
-    submitting.value = false
+    loading.value = false
   }
 }
 </script>
-
-<style scoped>
-.fade-enter-active, .fade-leave-active { transition: opacity .2s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
-
-/* Tokens projet (adapte si déjà définis globalement) */
-.bg-primary { background:#9ecdf1; }
-.bg-dark { background:#2b2729; }
-.text-light { color:#dee6ca; }
-.bg-backgroundDark { background:#1f1c1d; }
-.border-light\/10 { border-color: rgba(222,230,202,0.1); }
-.hover\:text-primary:hover { color:#9ecdf1; }
-</style>

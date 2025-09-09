@@ -21,7 +21,6 @@
   <CheckoutModal
     :visible="showCheckout"
     :cart-items="checkoutItems"
-    klown-email="louismaury19@gmail.com"
     @close="showCheckout = false"
     @success="onOrderSuccess"
   />
