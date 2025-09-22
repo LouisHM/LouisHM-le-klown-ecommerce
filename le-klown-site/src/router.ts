@@ -6,7 +6,9 @@ import Home from '@/pages/Home.vue'
 import Shop from '@/pages/Shop.vue'
 import Admin from '@/pages/Admin.vue'
 import NotFound from '@/pages/NotFound.vue'
-import Events from './pages/Events.vue'
+import AuthCallback from '@/pages/AuthCallback.vue'
+import Events from '@/pages/Events.vue'
+
 
 // Explicit typing avoids inference issues
 const routes: RouteRecordRaw[] = [
@@ -14,6 +16,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/shop', component: Shop },
   {path: '/events', component: Events },
   { path: '/admin', component: Admin, meta: { requiresAuth: true } },
+  { path: '/auth/callback', component: AuthCallback },
   { path: '/:pathMatch(.*)*', component: NotFound },
 ]
 
