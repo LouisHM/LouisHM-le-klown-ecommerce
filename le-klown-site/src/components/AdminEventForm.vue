@@ -135,30 +135,30 @@ import { supabase } from '@/supabase/client'
 
 type DBEvent = {
   id?: number | string
-  date?: string         // 'YYYY-MM-DD'
-  lieu?: string
-  image_url?: string
-  billeterie_url?: string
-  insta_url?: string
-  prix_debut?: number | string  // Supabase numeric peut revenir string
-  description?: string
   nom?: string
+  lieu?: string
+  date?: string
+  description?: string
+  image_url?: string | null
+  prix_debut?: number | null
+  billeterie_url?: string | null
+  insta_url?: string | null
 }
 
 const props = defineProps<{ event: DBEvent | null }>()
 const emit = defineEmits<{ (e:'saved'): void }>()
 
 // État du formulaire, aligné BDD
-const form = reactive<Required<DBEvent>>({
+const form = reactive<Partial<DBEvent>>({
   id: undefined,
-  date: '',
+  nom: '',
   lieu: '',
-  image_url: '',
-  billeterie_url: '',
-  insta_url: '',
-  prix_debut: 0,
+  date: '',
   description: '',
-  nom: ''
+  image_url: null,
+  prix_debut: null,
+  billeterie_url: null,
+  insta_url: null,
 })
 
 const submitting = ref(false)

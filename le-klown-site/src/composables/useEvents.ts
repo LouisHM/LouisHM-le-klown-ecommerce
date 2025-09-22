@@ -1,6 +1,6 @@
 // src/composables/useEvents.ts
 import { ref } from 'vue'
-import { supabase } from '../supabase/client'
+import { supabase } from '@/supabase/client' // use alias
 
 export interface EventRecord {
   id: string
@@ -24,54 +24,67 @@ export function useEvents() {
   async function fetchEvents() {
     loading.value = true
     error.value = null
+
     const { data, error: err } = await supabase
-      .from<EventRecord>('evenements')
+      .from('evenements')
       .select('*')
       .order('date', { ascending: true })
+
     if (err) {
       error.value = err.message
       events.value = []
     } else {
-      events.value = data ?? []
+      events.value = (data ?? []) as unknown as EventRecord[]
     }
+
     loading.value = false
-    return { data, error: err }
+    return { data: events.value, error: err }
   }
 
   /** Fetch a single event by ID */
   async function fetchEvent(id: string) {
     const { data, error: err } = await supabase
-      .from<EventRecord>('evenements')
+      .from('evenements')
       .select('*')
       .eq('id', id)
       .single()
-    return { data, error: err }
+
+    return { data: (data ?? null) as unknown as EventRecord | null, error: err }
   }
 
   /** Add a new event */
   async function addEvent(input: Omit<EventRecord, 'id' | 'created_at'>) {
     const { data, error: err } = await supabase
-      .from<EventRecord>('evenements')
+      .from('evenements')
       .insert([input])
-    return { data, error: err }
+      .select('*')
+      .single()
+
+    return { data: (data ?? null) as unknown as EventRecord | null, error: err }
   }
 
   /** Update an existing event */
   async function updateEvent(id: string, updates: Partial<Omit<EventRecord, 'id'>>) {
     const { data, error: err } = await supabase
-      .from<EventRecord>('evenements')
+      .from('evenements')
       .update(updates)
       .eq('id', id)
-    return { data, error: err }
+      .select('*')
+      .single()
+
+    return { data: (data ?? null) as unknown as EventRecord | null, error: err }
   }
 
   /** Delete an event */
   async function deleteEvent(id: string) {
     const { data, error: err } = await supabase
-      .from<EventRecord>('evenements')
+      .from('evenements')
       .delete()
       .eq('id', id)
-    return { data, error: err }
+      .select('*')
+      .single()
+
+    return { data: (data ?? null) as unknown as EventRecord | null, error: err }
   }
 
   return {

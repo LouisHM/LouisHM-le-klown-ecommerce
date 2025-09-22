@@ -1,5 +1,6 @@
+// src/composables/useProducts.ts
 import { ref } from 'vue'
-import { supabase } from '../supabase/client'
+import { supabase } from '@/supabase/client' // use alias
 
 export interface Product {
   id: string
@@ -26,24 +27,28 @@ export function useProducts() {
   async function fetchProducts() {
     loading.value = true
     error.value = null
+
     const { data, error: err } = await supabase
-      .from<Product>(PUBLIC_VIEW)
+      .from(PUBLIC_VIEW)
       .select('*')
       .order('created_at', { ascending: true })
+
     if (err) error.value = humanizeErr(err)
-    else products.value = data || []
+    else products.value = (data ?? []) as unknown as Product[]
+
     loading.value = false
-    return { data, error: err }
+    return { data: products.value, error: err }
   }
 
   /** Fetch single product by ID (public) */
   async function fetchProduct(id: string) {
     const { data, error: err } = await supabase
-      .from<Product>(PUBLIC_VIEW)
+      .from(PUBLIC_VIEW)
       .select('*')
       .eq('id', id)
       .single()
-    return { data, error: err }
+
+    return { data: (data ?? null) as unknown as Product | null, error: err }
   }
 
   /** Add a new product (admin only) */
@@ -58,34 +63,38 @@ export function useProducts() {
     deleted?: boolean
   }) {
     const payload = { deleted: false, ...input }
+
     const { data, error: err } = await supabase
-      .from<Product>(TABLE)
+      .from(TABLE)
       .insert([payload])
-      .select()
+      .select('*')
       .single()
-    return { data, error: err }
+
+    return { data: (data ?? null) as unknown as Product | null, error: err }
   }
 
   /** Update an existing product (admin only) */
   async function updateProduct(id: string, updates: Partial<Omit<Product, 'id'>>) {
     const { data, error: err } = await supabase
-      .from<Product>(TABLE)
+      .from(TABLE)
       .update(updates)
       .eq('id', id)
-      .select()
+      .select('*')
       .single()
-    return { data, error: err }
+
+    return { data: (data ?? null) as unknown as Product | null, error: err }
   }
 
   /** Soft-delete a product (admin only) */
   async function deleteProduct(id: string) {
     const { data, error: err } = await supabase
-      .from<Product>(TABLE)
+      .from(TABLE)
       .update({ deleted: true })
       .eq('id', id)
-      .select()
+      .select('*')
       .single()
-    return { data, error: err }
+
+    return { data: (data ?? null) as unknown as Product | null, error: err }
   }
 
   function humanizeErr(e: any) {

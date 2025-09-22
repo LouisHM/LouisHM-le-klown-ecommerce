@@ -113,6 +113,11 @@ const messages = {
       edit: 'Edit',
       delete: 'Delete',
       confirmDelete: 'Are you sure you want to delete this product?',
+      confirm: 'Confirm',
+      required: 'Required',
+      optional: 'Optional',
+      add: 'Add',
+      reset: 'Reset',
     },
 
     auth: {
@@ -252,6 +257,11 @@ const messages = {
       sizes: 'Tailles (séparées par des virgules)',
       sizesHelp: 'Ex : S,M,L,XL',
       stock: 'Stock',
+      required: 'Requis',
+      confirm: 'Confirmer',
+      optional: 'Optionnel',
+      add: 'Ajouter',
+      reset: 'Réinitialiser',
       images: 'Images (URLs séparées par virgules)',
       imagesHelp: 'Ex : https://…,https://…',
       date: 'Date',
@@ -315,3 +325,4 @@ export const i18n = createI18n({
   fallbackLocale: 'en',
   messages,
 })
+

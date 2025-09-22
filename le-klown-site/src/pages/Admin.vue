@@ -118,7 +118,7 @@
             <div class="relative aspect-[4/3] bg-backgroundDark rounded-md overflow-hidden">
               <img
                 v-if="firstImage(p)"
-                :src="firstImage(p)"
+                :src="firstImage(p) ?? undefined"
                 alt=""
                 class="w-full h-full object-cover"
                 @error="onImgError($event)"

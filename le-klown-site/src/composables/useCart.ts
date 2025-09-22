@@ -1,3 +1,4 @@
+// src/composables/useCart.ts
 import { reactive, computed } from 'vue'
 
 export interface CartItem {
@@ -15,7 +16,6 @@ export function useCart() {
   const items = computed(() => state.items)
 
   function addItem(item: CartItem) {
-    // si même produit+taille déjà présent, on incrémente la quantité
     const existing = state.items.find(
       i => i.productId === item.productId && i.size === item.size
     )
@@ -31,18 +31,12 @@ export function useCart() {
   }
 
   function clearCart() {
-    state.items = []
+    state.items.splice(0) // keep array reactive
   }
 
   const total = computed(() =>
     state.items.reduce((sum, i) => sum + i.price * i.quantity, 0)
   )
 
-  return {
-    items,
-    total,
-    addItem,
-    removeItem,
-    clearCart,
-  }
+  return { items, total, addItem, removeItem, clearCart }
 }

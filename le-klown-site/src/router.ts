@@ -1,43 +1,25 @@
-import { createRouter, createWebHistory } from 'vue-router'
+// src/router.ts
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+
+// Pages (adjust to your actual files)
 import Home from '@/pages/Home.vue'
-import Events from '@/pages/Events.vue'
 import Shop from '@/pages/Shop.vue'
 import Admin from '@/pages/Admin.vue'
-import { role, fetchUserRole } from '@/composables/useAuth'
+import NotFound from '@/pages/NotFound.vue'
+import Events from './pages/Events.vue'
 
-const routes = [
+// Explicit typing avoids inference issues
+const routes: RouteRecordRaw[] = [
   { path: '/', component: Home },
-  { path: '/events', component: Events },
   { path: '/shop', component: Shop },
-  {
-    path: '/admin',
-    component: Admin,
-    meta: { requiresAdmin: true },
-  },
-  // Catch-all route (404)
-  {
-    path: '/:pathMatch(.*)*',
-    redirect: '/',
-  },
+  {path: '/events', component: Events },
+  { path: '/admin', component: Admin, meta: { requiresAuth: true } },
+  { path: '/:pathMatch(.*)*', component: NotFound },
 ]
 
-const router = createRouter({
-  history: createWebHistory(),
+export const router = createRouter({
+  history: createWebHistory(), // or createWebHistory(import.meta.env.BASE_URL)
   routes,
 })
 
-// ✅ Guard global pour vérifier les droits admin
-router.beforeEach(async (to, from, next) => {
-  if (to.meta.requiresAdmin) {
-    await fetchUserRole() // s'assure que le rôle est à jour
-    if (role.value === 'admin') {
-      next()
-    } else {
-      next('/403') // ou next('/') si tu préfères
-    }
-  } else {
-    next()
-  }
-})
-
-export { router }
+export default router

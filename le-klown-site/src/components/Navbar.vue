@@ -35,7 +35,7 @@
         <!-- Bouton panier -->
 
 <!-- Composant Cart -->
-<Cart v-if="showCart" @close="showCart = false" />
+<Cart v-if="showCart" :open="showCart" @close="showCart = false" />
       </div>
 
       <!-- Right zone: Auth & Lang -->

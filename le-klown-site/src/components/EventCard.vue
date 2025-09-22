@@ -6,7 +6,7 @@
     <!-- Image de fond -->
     <img
       v-if="event.image_url"
-      :src="event.image_url"
+      :src="event.image_url ?? undefined"
       alt="Visuel de l'événement"
       class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 z-0"
     />
@@ -28,7 +28,7 @@
 
       <!-- Prix -->
       <p class="text-xs text-red-400 font-semibold mt-1">
-        À partir de {{ event.prix_debut }} €
+        À partir de {{ event.prix_debut ?? '—' }} €
       </p>
     </div>
 
@@ -41,18 +41,34 @@
       <button @click="$emit('edit', event)" class="text-xs px-2 py-1 rounded bg-accent text-light hover:bg-light hover:text-dark transition">✏️</button>
       <button @click="$emit('delete', event.id)" class="text-xs px-2 py-1 rounded bg-red-600 text-light hover:bg-light hover:text-dark transition">🗑️</button>
     </div>
-</li>
+  </li>
 </template>
 
 <script setup lang="ts">
-defineProps({
-  event: Object,
-  editable: Boolean
-})
+type DBEvent = {
+  id: number | string
+  nom: string
+  lieu?: string
+  date?: string
+  description?: string | null
+  image_url?: string | null
+  prix_debut?: number | null
+  billeterie_url?: string | null
+  insta_url?: string | null
+}
 
-function formatDate(dateStr: string) {
+const { event, editable = false } = defineProps<{ event: DBEvent; editable?: boolean }>()
+
+const emit = defineEmits<{
+  (e: 'click'): void
+  (e: 'edit', event: DBEvent): void
+  (e: 'delete', id: number | string): void
+}>()
+
+function formatDate(dateStr?: string) {
+  if (!dateStr) return ''
   const d = new Date(dateStr)
-  return d.toLocaleDateString()
+  return Number.isNaN(d.getTime()) ? dateStr : d.toLocaleDateString()
 }
 </script>
 

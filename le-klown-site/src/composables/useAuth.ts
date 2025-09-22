@@ -1,17 +1,19 @@
+// src/composables/useAuth.ts
 import { ref } from 'vue'
-import { supabase } from '../supabase/client'
+import { supabase } from '@/supabase/client'
 
-export const user = ref<any>(null)
-export const role = ref<string | null>(null)
+export type AppRole = 'admin' | 'user' | 'guest'
 
-export async function fetchUserRole() {
+export const user = ref<import('@supabase/supabase-js').User | null>(null)
+export const role = ref<AppRole>('guest')
+
+export async function fetchUserRole(): Promise<AppRole> {
   const { data: sessionData } = await supabase.auth.getSession()
 
   if (!sessionData.session) {
-    // 👉 Utilisateur non connecté → on réinitialise tout
     user.value = null
-    role.value = null
-    return
+    role.value = 'guest'
+    return role.value
   }
 
   const u = sessionData.session.user
@@ -25,8 +27,16 @@ export async function fetchUserRole() {
 
   if (error) {
     console.error('Role fetch error:', error.message)
-    role.value = 'user' // fallback de sécurité
+    role.value = 'user'
   } else {
-    role.value = data?.role || 'user'
+    role.value = (data?.role as AppRole | null) ?? 'user'
   }
+
+  return role.value
+}
+
+export async function signOut(): Promise<void> {
+  await supabase.auth.signOut()
+  user.value = null
+  role.value = 'guest'
 }

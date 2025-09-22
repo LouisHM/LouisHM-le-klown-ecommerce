@@ -44,53 +44,62 @@
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { supabase } from '@/supabase/client'
-import logoutSvg from '/assets/svg/logout.svg?raw'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { role, fetchUserRole, signOut } from '@/composables/useAuth'
+import { supabase } from '@/supabase/client'
+import { role, fetchUserRole, signOut as signOutUser } from '@/composables/useAuth'
 
 const emit = defineEmits(['auth-changed'])
 const router = useRouter()
 const route = useRoute()
 
-async function handleSignOut() {
-  await signOut()
-  emit('auth-changed') // Pour update navbar si besoin
-  await fetchUserRole()
-
-  // Si on est sur /admin mais qu'on n'est plus admin → redirection immédiate
-  if (route.path.startsWith('/admin') && role.value !== 'admin') {
-    router.replace('/403') // ou '/'
-  }
-}
-
-const user = ref<any>(null)
+type SupabaseUser = import('@supabase/supabase-js').User | null
+const user = ref<SupabaseUser>(null)
 const showLogout = ref(false)
+
+// --- Auth state bootstrap + live sync ---
+let unsub: (() => void) | null = null
+
+onMounted(async () => {
+  // initial user
+  const { data: { user: u } } = await supabase.auth.getUser()
+  user.value = u ?? null
+
+  // subscribe to auth changes
+  const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    user.value = session?.user ?? null
+    await fetchUserRole()
+    emit('auth-changed')
+  })
+  unsub = () => sub.subscription.unsubscribe()
+})
+
+onUnmounted(() => {
+  if (unsub) unsub()
+})
 
 async function signInWithGoogle() {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      queryParams: {
-        prompt: 'select_account'
-      }
+      queryParams: { prompt: 'select_account' }
     }
   })
   if (error) console.error('Erreur OAuth:', error.message)
 }
 
-
-async function signOut() {
-  await supabase.auth.signOut()
-  user.value = null
+async function handleSignOut() {
+  await signOutUser()                // ✅ use the composable export
   showLogout.value = false
-}
+  user.value = null
+  emit('auth-changed')
+  await fetchUserRole()
 
-onMounted(async () => {
-  const { data: { user: u } } = await supabase.auth.getUser()
-  user.value = u
-})
+  // If currently on /admin and no longer admin → redirect
+  if (route.path.startsWith('/admin') && role.value !== 'admin') {
+    router.replace('/403') // or '/'
+  }
+}
 </script>
+
