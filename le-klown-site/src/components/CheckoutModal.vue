@@ -187,7 +187,7 @@ const emit = defineEmits<{
 
 // Constants
 const FREE_SHIPPING_THRESHOLD = 25
-const SHIPPING_FEE = 3
+const SHIPPING_FEE = 5
 
 // Form state
 const form = reactive({

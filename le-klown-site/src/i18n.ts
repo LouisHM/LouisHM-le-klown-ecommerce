@@ -35,6 +35,11 @@ const messages = {
       title: 'Shop',
       details: 'View details',
       stockLeft: 'Stock left',
+      promo: {
+        default: "🎪 Welcome to the shop!",
+        freeShipping: "🚚 Free shipping on orders over 25€ 🚚",
+        discount10: "🔥 10% off all T-shirts this week"
+      },
       stock: {
         inStock: 'In stock',
         lowStock: 'Low stock',
@@ -191,6 +196,11 @@ const messages = {
       title: 'Boutique',
       details: 'Voir détails',
       stockLeft: 'Stock restant',
+      promo: {
+        default: "🎪 Bienvenue dans la boutique !",
+        freeShipping: "🚚 Livraison gratuite dès 25€ 🚚",
+        discount10: "🔥 -10% sur tous les T-shirts cette semaine"
+      },
       stock: {
         inStock: 'En stock',
         lowStock: 'Bientôt épuisé',

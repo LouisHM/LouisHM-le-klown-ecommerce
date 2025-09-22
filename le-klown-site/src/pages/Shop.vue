@@ -1,5 +1,6 @@
 <template>
   <div class="pt-24 bg-dark text-light min-h-screen">
+    <PromotionBanner :promos="['shop.promo.freeShipping']" />
     <div class="max-w-7xl mx-auto px-6 py-12">
       <h1 class="text-4xl font-heading mb-8 text-center">{{ $t('shop.title') }}</h1>
 
@@ -20,6 +21,7 @@
 import { onMounted } from 'vue'
 import { useProducts } from '@/composables/useProducts'
 import ProductCard from '@/components/ProductCard.vue'
+import PromotionBanner from '@/components/PromotionBanner.vue'
 
 const { products, loading, error, fetchProducts } = useProducts()
 
