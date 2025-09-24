@@ -7,6 +7,8 @@ import Shop from '@/pages/Shop.vue'
 import Admin from '@/pages/Admin.vue'
 import NotFound from '@/pages/NotFound.vue'
 import AuthCallback from '@/pages/AuthCallback.vue'
+import UsageConditions from './pages/UsageConditions.vue'
+import ConfidentialityConditions from './pages/ConfidentialityConditions.vue'
 import Events from '@/pages/Events.vue'
 
 
@@ -14,8 +16,10 @@ import Events from '@/pages/Events.vue'
 const routes: RouteRecordRaw[] = [
   { path: '/', component: Home },
   { path: '/shop', component: Shop },
-  {path: '/events', component: Events },
+  { path: '/events', component: Events },
   { path: '/admin', component: Admin, meta: { requiresAuth: true } },
+  { path: '/useTerms', component: UsageConditions },
+  { path: '/confidentialityConditions', component: ConfidentialityConditions },
   { path: '/auth/callback', component: AuthCallback },
   { path: '/:pathMatch(.*)*', component: NotFound },
 ]

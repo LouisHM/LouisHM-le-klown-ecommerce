@@ -1,5 +1,5 @@
 // src/composables/useAuth.ts
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { supabase } from '@/supabase/client'
 type User = import('@supabase/supabase-js').User
 
@@ -9,9 +9,15 @@ export const user = ref<User | null>(null)
 export const role = ref<AppRole>('guest')
 export const authLoading = ref(false)
 export const authError = ref<string | null>(null)
+export const isAuthenticated = computed(() => !!user.value)
 
 function redirectUrl() {
-  return `${window.location.origin}/auth/callback`
+  const site = (import.meta as any).env?.VITE_SITE_URL
+  if (typeof site === 'string' && site.startsWith('http')) {
+    return `${site.replace(/\/$/, '')}/auth/callback`
+  }
+  if (typeof window !== 'undefined') return `${window.location.origin}/auth/callback`
+  return '/auth/callback'
 }
 
 export async function fetchUserRole(): Promise<AppRole> {
@@ -41,15 +47,14 @@ export async function fetchUserRole(): Promise<AppRole> {
   return role.value
 }
 
+/** Initialize auth listeners; returns an unsubscribe function. */
 export function initAuth() {
-  // initial fetch
   supabase.auth.getUser().then(({ data }) => {
     user.value = data.user ?? null
     if (user.value) fetchUserRole()
   })
 
-  // keep in sync
-  supabase.auth.onAuthStateChange(async (event, session) => {
+  const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
     user.value = session?.user ?? null
     if (user.value && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
       await fetchUserRole()
@@ -58,6 +63,8 @@ export function initAuth() {
       role.value = 'guest'
     }
   })
+
+  return () => sub.subscription.unsubscribe()
 }
 
 export async function signUpWithEmail(email: string, password: string) {
@@ -127,8 +134,34 @@ export async function signInWithGoogle() {
   }
 }
 
-export async function signOut() {
-  await supabase.auth.signOut()
+/** Robust sign-out with verification + local fallback */
+export async function signOut(options?: { hardReloadFallback?: boolean }) {
+  // Revoke tokens across devices/tabs
+  const { error } = await supabase.auth.signOut({ scope: 'global' })
+  if (error) console.error('Supabase signOut error:', error.message)
+
+  // Verify
+  const { data: { user: still } } = await supabase.auth.getUser()
+
+  if (still) {
+    // Fallback: clear possible stale keys and reload if asked
+    try {
+      const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL as string
+      const host = new URL(supabaseUrl).host
+      const projectRef = host.split('.')[0]
+      // clear common storage variants
+      localStorage.removeItem(`sb-${projectRef}-auth-token`)
+      localStorage.removeItem(`sb-${projectRef}-auth-token.0`)
+      sessionStorage.removeItem(`sb-${projectRef}-auth-token`)
+      sessionStorage.removeItem(`sb-${projectRef}-auth-token.0`)
+    } catch {/* noop */}
+
+    if (options?.hardReloadFallback && typeof window !== 'undefined') {
+      window.location.replace('/')
+      return
+    }
+  }
+
   user.value = null
   role.value = 'guest'
 }

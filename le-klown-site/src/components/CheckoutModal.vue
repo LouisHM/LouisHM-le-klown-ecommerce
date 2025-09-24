@@ -149,7 +149,7 @@
                 <button
                   type="submit"
                   :disabled="submitting || !isValid || cartItems.length === 0"
-                  class="px-5 py-2 rounded-xl bg-primary text-dark font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                  class="px-5 py-2 rounded-xl bg-primary text-light font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {{ submitting ? t('checkout.sending') : t('checkout.confirm') }}
                 </button>
@@ -346,10 +346,6 @@ async function submit() {
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
 /* Tokens projet (adapte si déjà définis globalement) */
-.bg-primary { background:#9ecdf1; }
 .bg-dark { background:#2b2729; }
-.text-light { color:#dee6ca; }
-.bg-backgroundDark { background:#1f1c1d; }
 .border-light\/10 { border-color: rgba(222,230,202,0.1); }
-.hover\:text-primary:hover { color:#9ecdf1; }
 </style>

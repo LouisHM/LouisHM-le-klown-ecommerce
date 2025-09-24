@@ -23,7 +23,7 @@
           <!-- Close -->
           <button
             @click="$emit('close')"
-            class="absolute top-3 right-3 z-30 inline-flex items-center justify-center h-9 w-9 rounded-full bg-dark/60 border border-light/10 text-light hover:text-primary hover:bg-dark transition"
+            class="absolute top-0 right-0 z-30 inline-flex items-center justify-center h-9 w-9 text-light hover:text-primary transition"
             :aria-label="t('common.close')"
           >
             <span aria-hidden="true" class="text-xl leading-none">&times;</span>
@@ -34,12 +34,12 @@
             <div class="flex gap-2 bg-dark/60 p-1 rounded-xl border border-light/10">
               <button
                 class="flex-1 py-2 rounded-lg text-sm"
-                :class="mode==='signin' ? 'bg-primary text-dark font-semibold' : 'text-light/80'"
+                :class="mode==='signin' ? 'bg-primary text-light font-semibold' : 'text-light/80'"
                 @click="mode='signin'"
               >{{ t('auth.signIn') }}</button>
               <button
                 class="flex-1 py-2 rounded-lg text-sm"
-                :class="mode==='signup' ? 'bg-primary text-dark font-semibold' : 'text-light/80'"
+                :class="mode==='signup' ? 'bg-primary text-light font-semibold' : 'text-light/80'"
                 @click="mode='signup'"
               >{{ t('auth.signUp') }}</button>
             </div>
@@ -67,7 +67,7 @@
               <button
                 type="submit"
                 :disabled="authLoading || (mode==='signup' && password!==confirm)"
-                class="w-full py-3 rounded-xl bg-primary text-dark font-semibold hover:bg-light hover:text-dark transition disabled:opacity-60 disabled:cursor-not-allowed"
+                class="w-full py-3 rounded-xl bg-primary text-light font-semibold hover:bg-light hover:text-dark transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <span v-if="mode==='signin'">{{ t('auth.signIn') }}</span>
                 <span v-else>{{ t('auth.createAccount') || t('auth.signUp') }}</span>

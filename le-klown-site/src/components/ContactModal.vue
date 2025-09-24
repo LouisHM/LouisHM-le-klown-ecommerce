@@ -42,7 +42,7 @@
             <button
               @click="$emit('close')"
               :aria-label="t('common.close') || 'Close'"
-              class="absolute top-3 right-3 z-30 inline-flex items-center justify-center h-9 w-9 rounded-full bg-dark/60 border border-light/10 text-light hover:text-primary hover:bg-dark transition focus:outline-none focus:ring-2 focus:ring-primary/40"
+              class="absolute top-1 right-1 z-30 inline-flex items-center justify-center h-9 w-9 rounded-full bg-dark/60 border border-light/10 text-light hover:text-primary hover:bg-dark transition focus:outline-none focus:ring-2 focus:ring-primary/40"
             >
               <span aria-hidden="true" class="text-xl leading-none">&times;</span>
             </button>

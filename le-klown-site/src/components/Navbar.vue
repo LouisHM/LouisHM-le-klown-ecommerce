@@ -1,9 +1,9 @@
 <template>
 <header
   :class="[
-    'fixed top-0 left-0 w-full z-50 duration-500 animate-fade-in',
+    'fixed top-0 left-0 w-full z-50 duration-500 animate-fade-in ',
     showNavbar ? 'translate-y-0' : '-translate-y-full',
-    isScrolled ? 'bg-dark shadow-md' : '',
+    isScrolled ? ' shadow-md bg-dark' : '',
     isOpen ? 'bg-dark' : ''
   ]"
 >
@@ -11,7 +11,7 @@
     <nav class="max-w-7xl mx-auto flex justify-between items-center p-4">
       <!-- Logo -->
       <div class="flex items-center text-3xl font-heading tracking-wide">
-        <img src="../../public/assets/img/logo-klown.png" alt="LE KLOWN" width="50" class="inline-block mr-2" />
+        <img src="/assets/img/logo-klown.png" alt="LE KLOWN" width="50" class="inline-block mr-2" />
         <span class="text-light text-">LE KLOWN</span>
       </div>
 
@@ -127,9 +127,14 @@ const cartCount = computed(() => items.value.reduce((sum, i) => sum + i.quantity
 
 function handleScroll() {
   const y = window.scrollY
-  isScrolled.value = y > 100
+  const isLandscape = window.innerWidth > window.innerHeight
+
+  const threshold = isLandscape ? 100 : 50
+
+  isScrolled.value = y > threshold
   showNavbar.value = true
 }
+
 
 onMounted(() => {
   // Montre la navbar après 2s

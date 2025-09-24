@@ -7,20 +7,17 @@
       class="!fixed left-auto right-4 bottom-4 md:right-6 md:bottom-6 z-[100] relative
              w-14 h-14 rounded-full shadow-xl bg-primary backdrop-blur
              inline-flex items-center justify-center
-             hover:bg-white text-dark transition pointer-events-auto"
+             hover:bg-white hover:text-primary text-light transition pointer-events-auto"
       @click="openCart()"
       :aria-label="t('cart.open', 1) || 'Ouvrir le panier'"
     >
-      <!-- Icône Panier -->
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-light" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M7 4h-2l-1 2h2l3.6 7.59-1.35 2.45A2 2 0 0 0 10 19h9v-2h-9l1.1-2h7.45a2 2 0 0 0 1.8-1.12L22 8H7.42l-.7-1.4L7 4z"/>
-      </svg>
+    <i class="fa-solid fa-cart-shopping"></i>
 
       <!-- Bulle notification -->
       <span
         v-if="count > 0"
         class="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full text-[11px] font-bold
-               text-light bg-error flex items-center justify-center ring-2 ring-dark"
+               text-light bg-primary flex items-center justify-center ring-2 ring-dark"
         :aria-label="`${count} ${t('cart.items') || 'articles'}`"
       >
         {{ count }}
