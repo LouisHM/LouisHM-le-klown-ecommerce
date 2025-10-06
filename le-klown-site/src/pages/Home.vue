@@ -2,13 +2,17 @@
   <div class="bg-dark text-light">
 
       <!-- Hero section full height -->
-    <section class=" pt-24 relative min-h-screen flex flex-col justify-center gap-5 w-full overflow-hidden text-light bg-black">
+    <section
+      class=" pt-24 relative min-h-screen flex flex-col justify-center gap-5 w-full overflow-hidden text-light bg-black"
+      :style="hasHeroVideo ? undefined : fallbackBackground"
+    >
       <!-- Vidéo background -->
       <video
+        v-if="hasHeroVideo"
         autoplay muted loop playsinline
         class="absolute inset-0 w-full h-full object-cover brightness-[0.4]"
       >
-        <source src="/assets/videos/show1.mp4" type="video/mp4" />
+        <source :src="heroVideoSrc" type="video/mp4" />
         {{ $t('home.errorVideo') }}
 
       </video>
@@ -58,9 +62,9 @@
         <button
           v-show="showHero "
           @click="scrollToNextSection"
-          class="opacity-0 animate-fade-in text-3xl text-dark bg-light text-primary rounded-full px-3 py-1 hover:text-light hover:bg-dark transition"
+          class="opacity-0 animate-fade-in text-xl text-dark bg-light text-primary rounded-full p-2 aspect-square hover:text-light hover:bg-dark transition"
         >
-          ↓
+        <i class="fa-solid fa-arrow-down"></i>
         </button>
       </div>
 
@@ -80,6 +84,19 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import ContactModal from '@/components/ContactModal.vue'
+
+const heroVideoEnv = (import.meta as any).env?.VITE_HERO_VIDEO_URL
+const resolvedHeroVideo = typeof heroVideoEnv === 'string' ? heroVideoEnv.trim() : ''
+const heroVideoSrc = resolvedHeroVideo === 'disabled'
+  ? ''
+  : (resolvedHeroVideo || '/assets/videos/show1.mp4')
+const hasHeroVideo = heroVideoSrc.trim().length > 0
+
+const fallbackBackground: Record<string, string> = {
+  backgroundImage: "url('/assets/img/leklown1.jpg')",
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+}
 
 const showContact = ref(false)
 
@@ -132,14 +149,14 @@ function scrollToNextSection() {
 }
 
 .animate-slide-in-right {
-  animation: slide-in-right 0.8s ease-out forwards;
+  animation: slide-in-right 0.6s ease-out forwards;
 }
 
 .animate-slide-in-left {
-  animation: slide-in-left 0.8s ease-out forwards;
+  animation: slide-in-left 0.6s ease-out forwards;
 }
 
 .animate-fade-in {
-  animation: fade-in 0.8s ease-out forwards;
+  animation: fade-in 0.6s ease-out forwards;
 }
 </style>

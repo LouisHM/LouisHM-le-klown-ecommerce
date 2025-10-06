@@ -103,8 +103,12 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  authLoading, authError,
-  signInWithEmail, signUpWithEmail, signInWithGoogle
+  authLoading,
+  authError,
+  signInWithEmail,
+  signUpWithEmail,
+  signInWithGoogle,
+  clearAuthError,
 } from '@/composables/useAuth'
 
 const { t } = useI18n()
@@ -122,6 +126,7 @@ const panel = ref<HTMLElement | null>(null)
 watch(() => props.visible, (v) => {
   if (v) {
     success.value = null
+    clearAuthError()
     setTimeout(() => panel.value?.focus(), 0)
   }
 })

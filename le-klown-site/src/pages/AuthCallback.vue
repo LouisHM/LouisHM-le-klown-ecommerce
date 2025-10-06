@@ -9,23 +9,63 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { supabase } from '@/supabase/client'
+import { refreshSession } from '@/composables/useAuth'
 
 const router = useRouter()
+const route = useRoute()
+
+function hasQueryParam(url: string, key: string) {
+  try {
+    const u = new URL(url)
+    return u.searchParams.has(key)
+  } catch {
+    return false
+  }
+}
+
+function hasHashParam(url: string, key: string) {
+  try {
+    const u = new URL(url)
+    const hash = new URLSearchParams(u.hash.replace(/^#/, ''))
+    return hash.has(key)
+  } catch {
+    return false
+  }
+}
+
+function clearUrl() {
+  try {
+    const u = new URL(window.location.href)
+    u.searchParams.delete('code')
+    u.searchParams.delete('state')
+    u.hash = ''
+    window.history.replaceState({}, document.title, `${u.pathname}${u.search}`)
+  } catch {
+    /* ignore */
+  }
+}
 
 onMounted(async () => {
+  const href = window.location.href
+
   try {
-    // Creates a session when redirected back from Supabase/Google
-    const { error } = await supabase.auth.exchangeCodeForSession(window.location.href)
-    if (error) {
-      console.error('exchangeCodeForSession', error.message)
+    if (hasQueryParam(href, 'code')) {
+      const { error } = await supabase.auth.exchangeCodeForSession(href)
+      if (error) throw error
+    } else if (hasHashParam(href, 'access_token')) {
+      const { error } = await supabase.auth.getSession()
+      if (error) throw error
     }
-  } catch (e) {
-    console.error(e)
+
+    await refreshSession()
+  } catch (err) {
+    console.error('[AuthCallback]', err)
   } finally {
-    // Redirect where you want users to land after login
-    router.replace('/shop')
+    clearUrl()
+    const next = typeof route.query.next === 'string' ? route.query.next : '/'
+    router.replace(next || '/')
   }
 })
 </script>

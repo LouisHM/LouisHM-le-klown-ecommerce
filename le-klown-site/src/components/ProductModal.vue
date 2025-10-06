@@ -50,9 +50,7 @@
                          ring-1 ring-white/20 hover:ring-white/40 transition"
                   aria-label="Image précédente"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M12.293 15.707a1 1 0 01-1.414 0L5.586 10l5.293-5.707a1 1 0 111.414 1.414L8.414 10l3.879 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                  </svg>
+                  <i class="fa-solid fa-chevron-left"></i>
                 </button>
                 <button
                   v-if="hasMultiple"
@@ -62,9 +60,7 @@
                          ring-1 ring-white/20 hover:ring-white/40 transition"
                   aria-label="Image suivante"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 -scale-x-100" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M12.293 15.707a1 1 0 01-1.414 0L5.586 10l5.293-5.707a1 1 0 111.414 1.414L8.414 10l3.879 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                  </svg>
+                    <i class="fa-solid fa-chevron-right"></i>
                 </button>
 
                 <!-- Index -->
@@ -162,7 +158,7 @@
                 <button
                   @click="addToCart"
                   :disabled="product.stock === 0"
-                  class="w-full bg-primary text-dark md:text-light py-2.5 md:py-3 rounded-lg font-semibold
+                  class="w-full bg-primary text-light md:text-light py-2.5 md:py-3 rounded-lg font-semibold
                          hover:bg-light hover:text-dark transition
                          disabled:opacity-60 disabled:cursor-not-allowed"
                 >

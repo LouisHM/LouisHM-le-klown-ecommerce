@@ -1,6 +1,6 @@
 <template>
   <div>
-    <!-- Not logged in -->
+    <!-- Non connecté -->
     <button
       v-if="!user"
       @click="showAuth = true"
@@ -9,22 +9,17 @@
       {{ $t('auth.login') }}
     </button>
 
-    <!-- Logged in -->
+    <!-- Connecté -->
     <button
       v-else
       @click="showLogout = true"
       class="ml-4 text-light px-3 py-2 rounded-full hover:bg-light hover:text-dark transition flex items-center gap-2 group"
     >
       {{ user.user_metadata?.full_name || user.email }}
-      <svg xmlns="http://www.w3.org/2000/svg"
-           class="w-4 h-4 transition-colors group-hover:text-dark"
-           fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round"
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
-      </svg>
+      <i class="fa-solid fa-right-from-bracket"></i>
     </button>
 
-    <!-- Logout popup -->
+    <!-- Popup logout -->
     <Teleport to="body">
       <div
         v-if="showLogout"
@@ -33,49 +28,39 @@
         @keydown.esc.stop.prevent="showLogout = false"
         tabindex="-1"
       >
-        <div
-          class="bg-backgroundDark text-light p-6 rounded-2xl shadow-2xl w-full max-w-md mx-4 space-y-6 border border-light/10"
-        >
+        <div class="bg-backgroundDark text-light p-6 rounded-2xl shadow-2xl w-full max-w-md mx-4 space-y-6 border border-light/10">
           <p class="text-xl font-heading text-center">{{ $t('auth.logoutTitle') }}</p>
-          <div class="flex justify-end gap-3">
-            <button
-              @click="showLogout = false"
-              class="px-4 py-2 rounded bg-light text-dark hover:bg-secondaryLight transition"
-            >
+          <div class="flex justify-center gap-3">
+            <button @click="showLogout = false" class="px-4 py-2 rounded bg-light text-dark hover:bg-darkBackground transition">
               {{ $t('auth.cancel') }}
             </button>
-            <button
-              @click="handleSignOut"
-              class="px-4 py-2 rounded bg-primary text-light hover:bg-light hover:text-dark transition"
-            >
+            <button @click="handleSignOut" class="px-4 py-2 rounded bg-primary text-light hover:bg-light hover:text-dark transition">
               {{ $t('auth.logout') }}
             </button>
           </div>
+          <p v-if="authError" class="text-error text-sm text-center">{{ authError }}</p>
         </div>
       </div>
     </Teleport>
 
-    <!-- Auth modal (email + Google) -->
+    <!-- Modal d’auth (email + Google) -->
     <AuthModal :visible="showAuth" defaultMode="signup" @close="showAuth = false" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, watch, nextTick, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AuthModal from '@/components/AuthModal.vue'
-import { supabase } from '@/supabase/client'
-import { user, role, fetchUserRole, signOut as signOutUser } from '@/composables/useAuth'
+import { user, signOut, authError, clearAuthError, authLoading } from '@/composables/useAuth'
 
 const emit = defineEmits<{ (e: 'auth-changed'): void }>()
-const router = useRouter()
-const route = useRoute()
 
 const showAuth = ref(false)
 const showLogout = ref(false)
+const router = useRouter()
 
 watch(showLogout, async (open) => {
-  console.debug('[AuthButton] showLogout ->', open)
   const html = document.documentElement
   open ? html.classList.add('overflow-hidden') : html.classList.remove('overflow-hidden')
   if (open) {
@@ -84,33 +69,24 @@ watch(showLogout, async (open) => {
     if (el instanceof HTMLElement) el.focus()
   }
 })
-
-
-let unsub: (() => void) | null = null
-
-onMounted(async () => {
-  const { data: { user: u } } = await supabase.auth.getUser()
-  user.value = u ?? null
-  if (user.value) await fetchUserRole()
-
-  const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
-    user.value = session?.user ?? null
-    await fetchUserRole()
-    emit('auth-changed')
-  })
-  unsub = () => sub.subscription.unsubscribe()
+watch(showAuth, (open) => {
+  if (open) clearAuthError()
 })
 
-onUnmounted(() => { unsub?.() })
-
 async function handleSignOut() {
-  await signOutUser({ hardReloadFallback: true }) // <-- important
-  showLogout.value = false
-  emit('auth-changed')
-  await fetchUserRole()
-
-  if (route.path.startsWith('/admin') && role.value !== 'admin') {
-    router.replace('/403')
+  if (authLoading.value) return
+  try {
+    await signOut()
+    showLogout.value = false
+    emit('auth-changed')
+    await router.replace('/')
+  } catch (err) {
+    console.error('[AuthButton] signOut failed:', err)
   }
 }
+
+
+onUnmounted(() => {
+  document.documentElement.classList.remove('overflow-hidden')
+})
 </script>

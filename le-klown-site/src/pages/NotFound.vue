@@ -7,7 +7,7 @@
     </p>
     <router-link
       to="/"
-      class="px-6 py-2 rounded-xl bg-primary text-dark font-semibold shadow hover:bg-light hover:text-dark transition"
+      class="px-6 py-2 rounded-xl bg-primary text-light font-semibold shadow hover:bg-light hover:text-dark transition"
     >
       Retour à l’accueil
     </router-link>
@@ -17,15 +17,3 @@
 <script setup lang="ts">
 // nothing special needed
 </script>
-
-<style scoped>
-.bg-dark {
-  background: #2b2729;
-}
-.text-light {
-  color: #dee6ca;
-}
-.text-primary {
-  color: #9ecdf1;
-}
-</style>

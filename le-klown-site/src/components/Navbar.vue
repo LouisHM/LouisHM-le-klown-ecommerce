@@ -16,7 +16,7 @@
       </div>
 
       <!-- Desktop navigation -->
-      <div class="hidden lg:flex justify-center gap-4 text-base flex-1">
+      <div v-if="authReady" class="hidden lg:flex justify-center gap-4 text-base flex-1">
         <RouterLink
           v-for="item in filteredLinks"
           :key="item.path"
@@ -32,29 +32,47 @@
             }"
           ></span>
         </RouterLink>
-        <!-- Bouton panier -->
 
-<!-- Composant Cart -->
-<Cart v-if="showCart" :open="showCart" @close="showCart = false" />
+        <!-- Panier -->
+        <Cart v-if="showCart" :open="showCart" @close="showCart = false" />
       </div>
 
-      <!-- Right zone: Auth & Lang -->
-      <div class="hidden lg:flex items-center gap-4 ml-4">
-        <AuthButton @auth-changed="updateUserRole" />
-        <div class="relative">
-          <button @click="langMenu = !langMenu" class="flex items-center px-3 py-1 rounded-full hover:bg-gray-700 transition focus:outline-none text-sm">
-            <span v-if="$i18n.locale === 'fr'">🇫🇷</span>
-            <span v-else>🇬🇧</span>
-            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-            </svg>
-          </button>
-          <div v-if="langMenu" class="absolute right-0 mt-2 bg-dark text-light rounded shadow-md z-50">
-            <button @click="changeLang('fr')" class="block w-full text-center px-4 py-2 hover:bg-gray-700 transition">🇫🇷</button>
-            <button @click="changeLang('en')" class="block w-full text-center px-4 py-2 hover:bg-gray-700 transition">🇬🇧</button>
-          </div>
-        </div>
-      </div>
+
+<!-- Right zone: Auth & Lang -->
+<div class="hidden lg:flex items-center gap-4 ml-4">
+  <!-- Auth toujours visible quand authReady est vrai -->
+  <AuthButton v-if="authReady" @auth-changed="updateUserRole" />
+
+  <!-- Si authReady est faux → on peut montrer un skeleton/loader -->
+  <span v-else class="text-sm opacity-70">
+    {{ $t('common.loading') || '...' }}
+  </span>
+
+  <div class="relative">
+    <button
+      @click="langMenu = !langMenu"
+      class="flex items-center gap-1 px-3 py-1 rounded-full hover:bg-gray-700 transition focus:outline-none text-sm"
+    >
+      <span v-if="$i18n.locale === 'fr'">🇫🇷</span>
+      <span v-else>🇬🇧</span>
+      <i class="fa-solid fa-chevron-down"></i>
+    </button>
+    <div
+      v-if="langMenu"
+      class="absolute right-0 mt-2 bg-dark text-light rounded shadow-md z-50"
+    >
+      <button
+        @click="changeLang('fr')"
+        class="block w-full text-center px-4 py-2 hover:bg-gray-700 transition"
+      >🇫🇷</button>
+      <button
+        @click="changeLang('en')"
+        class="block w-full text-center px-4 py-2 hover:bg-gray-700 transition"
+      >🇬🇧</button>
+    </div>
+  </div>
+</div>
+
     <!-- Burger menu -->
     <button @click="isOpen = !isOpen" class="lg:hidden focus:outline-none relative w-8 h-8 z-50 group">
       <span
@@ -80,8 +98,8 @@
     </nav>
 
     <!-- Mobile menu -->
-    <div v-if="isOpen" class="md:hidden bg-dark flex flex-col py-6 space-y-4 items-center text-base">
-      <div v-for="item in filteredLinks" :key="item.path" class="relative w-full text-center">
+<div v-if="isOpen && authReady" class="md:hidden bg-dark flex flex-col py-6 space-y-4 items-center text-base">
+        <div v-for="item in filteredLinks" :key="item.path" class="relative w-full text-center">
         <RouterLink 
           :to="item.path"
           class="relative px-4 py-2 group inline-block"
@@ -109,13 +127,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect, onMounted, onUnmounted  } from 'vue'
+import { ref, computed, onMounted, onUnmounted  } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter, useRoute } from 'vue-router'
 import AuthButton from '@/components/AuthButton.vue'
-import { fetchUserRole, role } from '@/composables/useAuth'
+import { role, authReady, refreshSession } from '@/composables/useAuth'
 import { useCart } from '@/composables/useCart'
-
 import Cart from '@/components/Cart.vue'
 
 const showCart = ref(false)
@@ -169,28 +185,12 @@ const filteredLinks = computed(() =>
 )
 
 // Mise à jour du rôle (utilisé au login/logout)
-function updateUserRole() {
-  fetchUserRole()
+async function updateUserRole() {
+  await refreshSession()
 }
 
 function changeLang(lang: string) {
   locale.value = lang
   langMenu.value = false
 }
-
-// Re-fetch automatique au montage (et si besoin à chaque update réactive)
-watchEffect(() => {
-  fetchUserRole()
-})
-
-const router = useRouter()
-const route = useRoute()
-
-watchEffect(() => {
-  if (route.path.startsWith('/admin') && role.value !== 'admin') {
-    router.replace('/') // ou '/'
-  }
-})
-
-
 </script>

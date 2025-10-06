@@ -6,8 +6,7 @@ import '@fortawesome/fontawesome-free/css/all.min.css'
 import '../public/assets/main.css'
 import { initAuth } from '@/composables/useAuth'
 
-initAuth() // ✅ keep user/role in sync across the app
-
+await initAuth()
 
 createApp(App)
   .use(router)

@@ -1,5 +1,6 @@
 <template>
-  <div class="pt-24 px-4 md:px-10 min-h-screen bg-dark text-light">
+  <!-- Cas admin -->
+  <div v-if="ready && role === 'admin'" class="pt-24 px-4 md:px-10 min-h-screen bg-dark text-light">
     <!-- Mini-nav secondaire -->
     <div class="flex space-x-4 justify-center">
       <button
@@ -26,7 +27,9 @@
       />
 
       <!-- À venir -->
-      <h2 class="text-3xl font-heading text-light uppercase mb-6 text-start">{{ $t('events.upcoming') }}</h2>
+      <h2 class="text-3xl font-heading text-light uppercase mb-6 text-start">
+        {{ $t('events.upcoming') }}
+      </h2>
       <ul class="flex justify-center md:justify-start flex-wrap gap-4 mb-12">
         <li
           v-for="event in upcomingEvents"
@@ -34,10 +37,7 @@
           class="relative"
           @click="openModal(event)"
         >
-          <!-- La carte n’intercepte pas les clics -->
           <EventCard :event="event" class="pointer-events-none" />
-
-          <!-- Overlay actions -->
           <div class="absolute top-2 right-2 z-50 flex gap-2 pointer-events-auto">
             <button
               @pointerdown.stop
@@ -58,7 +58,9 @@
       </ul>
 
       <!-- Passés -->
-      <h2 class="text-3xl font-heading text-light uppercase mb-6 text-start">{{ $t('events.past') }}</h2>
+      <h2 class="text-3xl font-heading text-light uppercase mb-6 text-start">
+        {{ $t('events.past') }}
+      </h2>
       <ul class="flex justify-center md:justify-start flex-wrap gap-4">
         <li
           v-for="event in pastEvents"
@@ -67,7 +69,6 @@
           @click="openModal(event)"
         >
           <EventCard :event="event" class="pointer-events-none" />
-          <!-- Overlay actions -->
           <div class="absolute top-2 right-2 z-50 flex gap-2 pointer-events-auto">
             <button
               @pointerdown.stop
@@ -88,16 +89,11 @@
       </ul>
 
       <!-- Modal Détails -->
-      <EventModal
-        v-if="modalEvent"
-        :event="modalEvent"
-        @close="modalEvent = null"
-      />
+      <EventModal v-if="modalEvent" :event="modalEvent" @close="modalEvent = null" />
     </section>
 
     <!-- SECTION PRODUITS -->
     <section v-else class="space-y-12">
-      <!-- Formulaire Produits -->
       <AdminProductForm
         :key="selectedProduct?.id || 'new-product'"
         :product="selectedProduct"
@@ -105,7 +101,6 @@
         class="max-w-3xl mx-auto"
       />
 
-      <!-- Liste Produits -->
       <div>
         <h2 class="text-3xl font-heading text-primary mb-6">{{ $t('shop.title') }}</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -114,7 +109,7 @@
             :key="p.id"
             class="bg-gray-800 p-4 rounded-lg flex flex-col border border-light/10"
           >
-            <!-- Preview image -->
+            <!-- Image principale -->
             <div class="relative aspect-[4/3] bg-backgroundDark rounded-md overflow-hidden">
               <img
                 v-if="firstImage(p)"
@@ -132,13 +127,12 @@
             <p class="text-sm text-gray-400 truncate">{{ p.description }}</p>
             <div class="mt-2 flex-1">
               <span class="font-bold">{{ (Number(p.price) || 0).toFixed(2) }} €</span>
-              <span
-                v-if="p.has_sizes"
-                class="ml-2 text-sm"
-              >{{ $t('admin.sizes') }}: {{ (p.sizes || []).join(', ') }}</span>
+              <span v-if="p.has_sizes" class="ml-2 text-sm">
+                {{ $t('admin.sizes') }}: {{ (p.sizes || []).join(', ') }}
+              </span>
             </div>
 
-            <!-- Thumbs si plusieurs images -->
+            <!-- Miniatures -->
             <div v-if="(p.images || []).length > 1" class="mt-2 flex gap-2 overflow-x-auto">
               <img
                 v-for="(img, i) in p.images"
@@ -194,107 +188,108 @@
       </div>
     </div>
   </div>
+
+  <!-- Cas pas admin -->
+  <div v-else-if="ready && role !== 'admin'" class="py-24 text-center">
+    <h1 class="text-3xl font-heading mb-2">403</h1>
+    <p class="opacity-70">{{ $t('admin.forbidden') || 'Accès réservé aux administrateurs.' }}</p>
+  </div>
+
+  <!-- Loading -->
+  <div v-else class="py-24 text-center opacity-70">
+    {{ $t('common.loading') || 'Chargement…' }}
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { ref, onMounted, computed, watch } from 'vue'
 import { supabase } from '@/supabase/client'
 import EventCard from '@/components/EventCard.vue'
 import AdminEventForm from '@/components/AdminEventForm.vue'
 import AdminProductForm from '@/components/AdminProductForm.vue'
 import EventModal from '@/components/EventModal.vue'
-import { useProducts, Product } from '@/composables/useProducts'
+import { useProducts, type Product } from '@/composables/useProducts'
+import { role, authReady, refreshSession } from '@/composables/useAuth'
 
-// mode d’affichage
+// State
 const mode = ref<'events' | 'products'>('events')
-const { t } = useI18n()
-
-// classes onglets
-const activeClass   = 'px-4 py-2 rounded-t-lg bg-gray-800 text-light font-semibold'
-const inactiveClass = 'px-4 py-2 rounded-t-lg bg-dark border-t border-r border-l border-light hover:bg-gray-700'
-
-// --- ÉVÉNEMENTS ---
 const events = ref<any[]>([])
-const formEvent = ref<any|null>(null)   // ← édition
-const modalEvent = ref<any|null>(null)  // ← aperçu (modal)
-
-// fetch events
-async function fetchEvents() {
-  const { data } = await supabase
-    .from('evenements')
-    .select('*')
-    .order('date', { ascending: true })
-  events.value = data || []
-}
-
-function editEvent(e: any) {
-  formEvent.value = { ...e }     // n’ouvre plus la modale
-}
-
-function onEventSaved() {
-  formEvent.value = null
-  fetchEvents()
-}
-
-// --- PRODUITS ---
-const { products, fetchProducts, deleteProduct } = useProducts()
+const formEvent = ref<any|null>(null)
+const modalEvent = ref<any|null>(null)
 const selectedProduct = ref<Product|null>(null)
-
-function editProduct(p: Product) {
-  selectedProduct.value = { ...p }
-}
-
-function onProductSaved() {
-  selectedProduct.value = null
-  fetchProducts()
-}
-
-// --- DELETE confirmation ---
 const showConfirm = ref(false)
 let deleteTarget: { type: 'event'|'product'; id: any } | null = null
 
+// CSS classes
+const activeClass   = 'px-4 py-2 rounded-t-lg bg-gray-800 text-light font-semibold'
+const inactiveClass = 'px-4 py-2 rounded-t-lg bg-dark border border-light hover:bg-gray-700'
+
+// Fetch events
+async function fetchEvents() {
+  const { data, error } = await supabase.from('evenements').select('*').order('date', { ascending: true })
+  if (error) console.error('[Admin] fetchEvents error:', error)
+  events.value = data || []
+}
+function editEvent(e: any) { formEvent.value = { ...e } }
+function onEventSaved() { formEvent.value = null; fetchEvents() }
+
+// Products
+const { products, fetchProducts, deleteProduct } = useProducts()
+function editProduct(p: Product) { selectedProduct.value = { ...p } }
+function onProductSaved() { selectedProduct.value = null; fetchProducts() }
+
+// Delete confirm
 function confirmDelete(type: 'event'|'product', id: any) {
   deleteTarget = { type, id }
   showConfirm.value = true
 }
-
 async function performDelete() {
   if (!deleteTarget) return
   if (deleteTarget.type === 'event') {
     await supabase.from('evenements').delete().eq('id', deleteTarget.id)
-    fetchEvents()
+    await fetchEvents()
   } else {
     await deleteProduct(deleteTarget.id)
-    fetchProducts()
+    await fetchProducts()
   }
-  showConfirm.value = false
   deleteTarget = null
+  showConfirm.value = false
 }
 
-// initialisation
-onMounted(() => {
-  fetchEvents()
-  fetchProducts()
+// INIT
+const ready = ref(false)
+
+async function ensureAdminData() {
+  if (role.value === 'admin') {
+    await Promise.all([fetchEvents(), fetchProducts()])
+  }
+}
+
+onMounted(async () => {
+  if (!authReady.value) {
+    await refreshSession()
+  }
+
+  ready.value = true
+  await ensureAdminData()
 })
 
-// Tris + modal
-const now = new Date().getTime()
-const upcomingEvents = computed(() =>
-  events.value.filter(e => new Date(e.date).getTime() >= now)
-)
-const pastEvents = computed(() =>
-  events.value.filter(e => new Date(e.date).getTime() < now).reverse()
-)
+watch(role, async (value, previous) => {
+  if (value === 'admin' && previous !== 'admin' && ready.value) {
+    await ensureAdminData()
+  }
+})
+
+// Derived
+const now = Date.now()
+const upcomingEvents = computed(() => events.value.filter(e => new Date(e.date).getTime() >= now))
+const pastEvents = computed(() => events.value.filter(e => new Date(e.date).getTime() < now).reverse())
 function openModal(event: any) { modalEvent.value = event }
 
-// --- Helpers images produits ---
+// Helpers
 function firstImage(p: any): string | null {
   const imgs = Array.isArray(p?.images) ? p.images : []
   return imgs.find((u: string) => !!u) || null
 }
-function onImgError(ev: Event) {
-  const el = ev.target as HTMLImageElement
-  el.style.display = 'none'
-}
+function onImgError(ev: Event) { (ev.target as HTMLImageElement).style.display = 'none' }
 </script>

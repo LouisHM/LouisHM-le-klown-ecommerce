@@ -43,10 +43,9 @@
         <!-- Header -->
         <div class="px-4 py-4 flex items-center justify-between border-b border-white/10">
           <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-full bg-primary/20 inline-flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M7 4h-2l-1 2h2l3.6 7.59-1.35 2.45A2 2 0 0 0 10 19h9v-2h-9l1.1-2h7.45a2 2 0 0 0 1.8-1.12L22 8H7.42l-.7-1.4L7 4z"/>
-              </svg>
+            <div class="w-9 h-9 rounded-full bg-primary/20 inline-flex text-primary items-center justify-center">
+              <i class="fa-solid fa-cart-shopping"></i>
+
             </div>
             <h2 class="text-xl font-heading">{{ t('cart.title') || 'Panier' }}</h2>
           </div>
