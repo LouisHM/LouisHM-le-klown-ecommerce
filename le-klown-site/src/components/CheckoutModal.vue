@@ -197,6 +197,7 @@ import { useI18n } from 'vue-i18n'
 import { toUnitPriceEUR } from '@/utils/price'
 import { user as authUser, firstName as authFirstName, lastName as authLastName } from '@/composables/useAuth'
 import { useCart } from '@/composables/useCart'
+import { supabase } from '@/supabase/client'
 
 const { t, locale } = useI18n()
 
@@ -225,12 +226,12 @@ const paymentStrings = computed(() => locale.value === 'fr'
   ? {
       title: 'Comment régler ?',
       instructions: 'En attendant le paiement en ligne, envoie le montant de ta commande par PayPal à klownlife.music@gmail.com en précisant la référence.',
-      notice: 'Le paiement par carte arrive très bientôt. Nous confirmerons ta commande par email dès réception du virement.',
+      notice: 'Important : sans confirmation de paiement sous 48 h, la commande sera automatiquement annulée.',
     }
   : {
       title: 'How to pay?',
       instructions: 'Until online payments are live, please send your order total by PayPal to klownlife.music@gmail.com and add your order reference in the message.',
-      notice: 'Card payments are coming soon. We will confirm your order by email as soon as we receive the transfer.',
+      notice: 'Important: if no payment is confirmed within 48 hours, the order will be automatically cancelled.',
     }
 )
 
@@ -238,13 +239,13 @@ const summaryStrings = computed(() => locale.value === 'fr'
   ? {
       title: 'Résumé de commande',
       close: 'Fermer',
-      reminder: "Envoie le total par PayPal à klownlife.music@gmail.com en reprenant cette référence. Nous confirmerons par email dès réception.",
+      reminder: "Envoie le total par PayPal à klownlife.music@gmail.com en reprenant cette référence. Sans paiement marqué 'Payée' sous 48 h, la commande sera annulée automatiquement.",
       confirmation: (ref: string) => `Merci ! Ta référence commande est ${ref}.`,
     }
   : {
       title: 'Order summary',
       close: 'Close',
-      reminder: 'Please send the total by PayPal to klownlife.music@gmail.com using this reference. We will confirm by email once received.',
+      reminder: 'Please send the total by PayPal to klownlife.music@gmail.com using this reference. Orders not marked as Paid within 48 hours are automatically cancelled.',
       confirmation: (ref: string) => `Thanks! Your order reference is ${ref}.`,
     }
 )
@@ -390,6 +391,34 @@ async function submit() {
   const items_html = `<table cellspacing="0" cellpadding="0" width="100%" style="border-collapse:collapse; font-size:14px;">${rows}</table>`
   const orderRef = buildOrderRef()
 
+  const itemsSnapshot = props.cartItems.map(it => ({
+    productId: (it as any).productId ?? null,
+    name: it.name,
+    price: Number(it.price) || 0,
+    quantity: Number(it.quantity) || 1,
+    size: it.size ?? null,
+    image: (it as any).image ?? null,
+  }))
+
+  const insertPayload = {
+    order_ref: orderRef,
+    user_id: authUser.value?.id ?? null,
+    customer_email: form.email,
+    customer_first_name: form.firstName,
+    customer_last_name: form.lastName,
+    customer_address: form.address,
+    customer_phone: form.phone || null,
+    customer_instagram: form.instagram || null,
+    customer_notes: form.notes || null,
+    subtotal_eur: subtotal.value,
+    shipping_eur: shipping.value,
+    total_eur: total.value,
+    items_snapshot: itemsSnapshot,
+    status: 'passée',
+    status_passed_at: new Date().toISOString(),
+    del_flag: false,
+  }
+
   const template_params = {
     to_email: form.email,
     order_ref: orderRef,
@@ -411,26 +440,41 @@ async function submit() {
 
   submitting.value = true
   try {
-    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ service_id, template_id, user_id, template_params })
-    })
-    if (!res.ok) throw new Error(`EmailJS error: ${res.status} ${await res.text().catch(() => '')}`)
+    const { error: insertError } = await supabase
+      .from('commandes')
+      .insert(insertPayload)
+      .single()
 
-    emit('success', { orderRef })
+    if (insertError) throw new Error(insertError.message)
+
     summaryData.orderRef = orderRef
-    summaryData.items = props.cartItems.map(it => ({
-      label: `${it.name}${it.size ? ` (${it.size})` : ''} × ${it.quantity}`,
-      total: lineTotal(it),
+    summaryData.items = itemsSnapshot.map(item => ({
+      label: `${item.name}${item.size ? ` (${item.size})` : ''} × ${item.quantity}`,
+      total: (item.price || 0) * item.quantity,
     }))
     summaryData.total = total.value
     cartStore.clearCart()
     showingSummary.value = true
+    emit('success', { orderRef })
+
+    submitting.value = false
+
+    try {
+      const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ service_id, template_id, user_id, template_params })
+      })
+      if (!res.ok) {
+        console.error('[Checkout] EmailJS error', await res.text().catch(() => res.statusText))
+      }
+    } catch (emailErr) {
+      console.error('[Checkout] Unable to send confirmation email:', emailErr)
+    }
+    return
   } catch (e: any) {
     console.error(e)
     error.value = t('form.error') || (e?.message ?? 'Une erreur est survenue. Réessaie.')
-  } finally {
     submitting.value = false
   }
 }

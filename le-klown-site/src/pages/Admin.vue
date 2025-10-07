@@ -15,6 +15,12 @@
       >
         {{ $t('admin.tabProducts') }}
       </button>
+      <button
+        @click="mode = 'orders'"
+        :class="mode === 'orders' ? activeClass : inactiveClass"
+      >
+        {{ $t('admin.tabOrders') || 'Commandes' }}
+      </button>
     </div>
 
     <!-- SECTION ÉVÉNEMENTS -->
@@ -95,7 +101,7 @@
     </section>
 
     <!-- SECTION PRODUITS -->
-    <section v-else class="space-y-12">
+    <section v-else-if="mode === 'products'" class="space-y-12">
       <div ref="productFormContainer">
         <AdminProductForm
           :key="selectedProduct?.id || 'new-product'"
@@ -168,6 +174,111 @@
       </div>
     </section>
 
+    <!-- SECTION COMMANDES -->
+    <section v-else class="space-y-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <h2 class="text-3xl font-heading">{{ $t('admin.ordersTitle') || 'Suivi des commandes' }}</h2>
+        <div class="flex items-center gap-3">
+          <button
+            @click="toggleDeletedOrders"
+            class="px-3 py-1 rounded-lg border border-light/20 hover:bg-light/10"
+          >
+            {{ showDeletedOrders ? ($t('admin.showActiveOrders') || 'Voir les commandes actives') : ($t('admin.showDeletedOrders') || 'Voir les commandes supprimées') }}
+          </button>
+          <button
+            @click="fetchOrders"
+            class="px-3 py-1 rounded-lg bg-primary text-light hover:bg-primary/80"
+          >
+            {{ $t('admin.refresh') || 'Rafraîchir' }}
+          </button>
+        </div>
+      </div>
+
+      <p class="text-sm opacity-70">{{ $t('admin.ordersHint') || 'Les commandes passent automatiquement en “Supprimée” si elles ne sont pas payées sous 48 h.' }}</p>
+
+      <div v-if="ordersError" class="text-error text-sm">{{ ordersError }}</div>
+      <div v-else-if="ordersLoading" class="text-sm opacity-70">{{ $t('common.loading') || 'Chargement…' }}</div>
+      <div v-else-if="filteredOrders.length === 0" class="text-sm opacity-60">{{ showDeletedOrders ? ($t('admin.noDeletedOrders') || 'Aucune commande supprimée') : ($t('admin.noOrders') || 'Aucune commande à afficher') }}</div>
+
+      <div v-else class="space-y-4">
+        <article
+          v-for="order in filteredOrders"
+          :key="order.id"
+          class="bg-backgroundDark/70 border border-light/10 rounded-xl p-5 space-y-4"
+        >
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <p class="text-lg font-heading">{{ order.order_ref }}</p>
+              <p class="text-sm opacity-70">{{ formatDate(order.created_at) }}</p>
+              <p class="text-sm opacity-70">{{ formatOrderStatus(order.status) }}</p>
+            </div>
+            <div class="flex gap-2 flex-wrap">
+              <button
+                v-if="nextStatus(order)"
+                @click="advanceOrderStatus(order)"
+                class="px-3 py-1 rounded-lg bg-primary text-light hover:bg-primary/80"
+              >
+                {{ $t('admin.advanceStatus', { status: formatOrderStatus(nextStatus(order) || '') }) || `Marquer ${formatOrderStatus(nextStatus(order) || '')}` }}
+              </button>
+              <button
+                v-if="!order.del_flag"
+                @click="markOrderDeleted(order, true)"
+                class="px-3 py-1 rounded-lg bg-red-600 text-light hover:bg-red-500"
+              >
+                {{ $t('admin.deleteOrder') || 'Supprimer' }}
+              </button>
+              <button
+                v-else
+                @click="markOrderDeleted(order, false)"
+                class="px-3 py-1 rounded-lg border border-light/30 hover:bg-light/10"
+              >
+                {{ $t('admin.restoreOrder') || 'Restaurer' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4 text-sm">
+            <div class="space-y-1">
+              <p class="font-semibold uppercase text-xs tracking-wide opacity-70">{{ $t('admin.customer') || 'Client' }}</p>
+              <p>{{ order.customer_first_name }} {{ order.customer_last_name }}</p>
+              <p>{{ order.customer_email }}</p>
+              <p v-if="order.customer_phone">{{ order.customer_phone }}</p>
+              <p v-if="order.customer_instagram">Instagram: {{ order.customer_instagram }}</p>
+              <p>{{ order.customer_address }}</p>
+              <p v-if="order.customer_notes" class="italic">{{ order.customer_notes }}</p>
+            </div>
+            <div class="space-y-1">
+              <p class="font-semibold uppercase text-xs tracking-wide opacity-70">{{ $t('admin.statusTimeline') || 'Statuts' }}</p>
+              <ul class="space-y-1">
+                <li v-for="entry in buildStatusTimeline(order)" :key="entry.label" class="flex justify-between gap-2">
+                  <span>{{ entry.label }}</span>
+                  <span class="opacity-70">{{ entry.when }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <p class="font-semibold uppercase text-xs tracking-wide opacity-70">{{ $t('admin.items') || 'Articles' }}</p>
+            <ul class="space-y-1 text-sm">
+              <li v-for="item in parseOrderItems(order)" :key="item.key" class="flex justify-between gap-2">
+                <span class="truncate">
+                  {{ item.name }}
+                  <template v-if="item.size">— {{ item.size }}</template>
+                  × {{ item.quantity }}
+                </span>
+                <span>{{ formatPrice(item.total) }} €</span>
+              </li>
+            </ul>
+            <div class="flex justify-end gap-3 text-sm font-semibold">
+              <span>{{ $t('checkout.total') || 'Total' }}:</span>
+              <span>{{ formatPrice(order.total_eur) }} €</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <!-- Modal confirmation delete -->
     <div
       v-if="showConfirm"
@@ -208,6 +319,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { supabase } from '@/supabase/client'
 import EventCard from '@/components/EventCard.vue'
 import AdminEventForm from '@/components/AdminEventForm.vue'
@@ -216,8 +328,10 @@ import EventModal from '@/components/EventModal.vue'
 import { useProducts, type Product } from '@/composables/useProducts'
 import { role, authReady, refreshSession } from '@/composables/useAuth'
 
+const { locale } = useI18n()
+
 // State
-const mode = ref<'events' | 'products'>('events')
+const mode = ref<'events' | 'products' | 'orders'>('events')
 const events = ref<any[]>([])
 const formEvent = ref<any|null>(null)
 const modalEvent = ref<any|null>(null)
@@ -227,6 +341,11 @@ const deleteError = ref<string | null>(null)
 const eventFormContainer = ref<HTMLElement | null>(null)
 const productFormContainer = ref<HTMLElement | null>(null)
 let deleteTarget: { type: 'event'|'product'; id: any } | null = null
+
+const orders = ref<OrderRecord[]>([])
+const ordersLoading = ref(false)
+const ordersError = ref<string | null>(null)
+const showDeletedOrders = ref(false)
 
 // CSS classes
 const activeClass   = 'px-4 py-2 rounded-t-lg bg-gray-800 text-light font-semibold'
@@ -319,7 +438,7 @@ const ready = ref(false)
 
 async function ensureAdminData() {
   if (role.value === 'admin') {
-    await Promise.all([fetchEvents(), fetchProducts()])
+    await Promise.all([fetchEvents(), fetchProducts(), fetchOrders()])
   }
 }
 
@@ -338,6 +457,12 @@ watch(role, async (value, previous) => {
   }
 })
 
+watch(mode, async (value) => {
+  if (value === 'orders' && role.value === 'admin' && orders.value.length === 0 && !ordersLoading.value) {
+    await fetchOrders()
+  }
+})
+
 // Derived
 const now = Date.now()
 const upcomingEvents = computed(() => events.value.filter(e => new Date(e.date).getTime() >= now))
@@ -350,4 +475,177 @@ function firstImage(p: any): string | null {
   return imgs.find((u: string) => !!u) || null
 }
 function onImgError(ev: Event) { (ev.target as HTMLImageElement).style.display = 'none' }
+
+type OrderStatus = 'passée' | 'payée' | 'envoyée' | 'livrée'
+
+type OrderItemSnapshot = {
+  productId?: string | null
+  name: string
+  price: number
+  quantity: number
+  size?: string | null
+  image?: string | null
+}
+
+type OrderRecord = {
+  id: string
+  order_ref: string
+  user_id: string | null
+  customer_email: string
+  customer_first_name: string | null
+  customer_last_name: string | null
+  customer_address: string | null
+  customer_phone: string | null
+  customer_instagram: string | null
+  customer_notes: string | null
+  subtotal_eur: number
+  shipping_eur: number
+  total_eur: number
+  items_snapshot: OrderItemSnapshot[] | string
+  status: OrderStatus
+  status_passed_at: string | null
+  status_paid_at: string | null
+  status_sent_at: string | null
+  status_delivered_at: string | null
+  del_flag: boolean
+  created_at: string
+  updated_at: string
+}
+
+const STATUS_SEQUENCE: OrderStatus[] = ['passée', 'payée', 'envoyée', 'livrée']
+const statusLabels: Record<OrderStatus, string> = {
+  passée: 'Passée',
+  payée: 'Payée',
+  envoyée: 'Envoyée',
+  livrée: 'Livrée',
+}
+
+const filteredOrders = computed(() =>
+  orders.value.filter(order => showDeletedOrders.value ? order.del_flag : !order.del_flag)
+)
+
+async function fetchOrders() {
+  ordersLoading.value = true
+  ordersError.value = null
+  const { data, error } = await supabase
+    .from('commandes')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    ordersError.value = error.message
+  } else {
+    orders.value = (data as OrderRecord[]) ?? []
+  }
+  ordersLoading.value = false
+}
+
+function toggleDeletedOrders() {
+  showDeletedOrders.value = !showDeletedOrders.value
+}
+
+function nextStatus(order: OrderRecord): OrderStatus | null {
+  const idx = STATUS_SEQUENCE.indexOf(order.status)
+  if (idx === -1 || idx === STATUS_SEQUENCE.length - 1) return null
+  return STATUS_SEQUENCE[idx + 1]
+}
+
+async function advanceOrderStatus(order: OrderRecord) {
+  const next = nextStatus(order)
+  if (!next) return
+
+  const now = new Date().toISOString()
+  const timestampField = next === 'payée' ? 'status_paid_at'
+    : next === 'envoyée' ? 'status_sent_at'
+    : next === 'livrée' ? 'status_delivered_at'
+    : 'status_passed_at'
+
+  const updates: Record<string, any> = {
+    status: next,
+    updated_at: now,
+  }
+  updates[timestampField] = now
+
+  const { data, error } = await supabase
+    .from('commandes')
+    .update(updates)
+    .eq('id', order.id)
+    .eq('status', order.status)
+    .select('*')
+    .single<OrderRecord>()
+
+  if (error) {
+    ordersError.value = error.message
+    return
+  }
+
+  ordersError.value = null
+  orders.value = orders.value.map(o => o.id === order.id ? data : o)
+}
+
+async function markOrderDeleted(order: OrderRecord, delFlag: boolean) {
+  const { data, error } = await supabase
+    .from('commandes')
+    .update({ del_flag: delFlag, updated_at: new Date().toISOString() })
+    .eq('id', order.id)
+    .select('*')
+    .single<OrderRecord>()
+
+  if (error) {
+    ordersError.value = error.message
+    return
+  }
+
+  ordersError.value = null
+  orders.value = orders.value.map(o => o.id === order.id ? data : o)
+}
+
+function parseOrderItems(order: OrderRecord) {
+  const value = order.items_snapshot
+  let snapshot: OrderItemSnapshot[] = []
+  if (Array.isArray(value)) {
+    snapshot = value as OrderItemSnapshot[]
+  } else if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      if (Array.isArray(parsed)) snapshot = parsed as OrderItemSnapshot[]
+    } catch (err) {
+      console.warn('[Admin] unable to parse items_snapshot', err)
+    }
+  }
+
+  return snapshot.map((item, index) => ({
+    key: `${order.id}-${index}`,
+    name: item.name ?? 'Article',
+    size: item.size ?? null,
+    quantity: Number(item.quantity) || 1,
+    total: (Number(item.price) || 0) * (Number(item.quantity) || 1),
+  }))
+}
+
+function buildStatusTimeline(order: OrderRecord) {
+  return STATUS_SEQUENCE.map(status => ({
+    label: statusLabels[status],
+    when: formatDate(
+      status === 'passée' ? order.status_passed_at
+      : status === 'payée' ? order.status_paid_at
+      : status === 'envoyée' ? order.status_sent_at
+      : order.status_delivered_at
+    ),
+  }))
+}
+
+function formatDate(value: string | null) {
+  if (!value) return '—'
+  return new Date(value).toLocaleString(locale.value === 'fr' ? 'fr-FR' : 'en-GB')
+}
+
+function formatPrice(value: number) {
+  return (Number(value) || 0).toFixed(2)
+}
+
+function formatOrderStatus(status: OrderStatus | '') {
+  if (!status) return ''
+  return statusLabels[status as OrderStatus] ?? status
+}
 </script>

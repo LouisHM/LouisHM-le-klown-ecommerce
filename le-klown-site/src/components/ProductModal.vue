@@ -34,11 +34,14 @@
 
             <!-- LEFT: Media -->
             <div class="p-3 md:p-0">
-              <div class="relative aspect-[4/3] md:aspect-square rounded-xl overflow-hidden bg-black/10">
+              <div
+                class="relative flex items-center justify-center rounded-xl bg-black/10 overflow-hidden
+                       h-[60vh] md:h-auto md:aspect-square"
+              >
                 <img
                   :src="currentImage"
                   :alt="product.name"
-                  class="absolute inset-0 w-full h-full object-cover"
+                  class="w-full h-full object-contain"
                 />
 
                 <!-- Arrows -->
