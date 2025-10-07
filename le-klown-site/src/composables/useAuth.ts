@@ -11,9 +11,16 @@ const role = ref<AppRole>('guest')
 const authReady = ref(false)
 const authLoading = ref(false)
 const authError = ref<string | null>(null)
+const firstName = ref('')
+const lastName = ref('')
 
 const isAuthenticated = computed(() => !!user.value)
 const isAdmin = computed(() => role.value === 'admin')
+const displayName = computed(() => {
+  const parts = [firstName.value, lastName.value].filter(Boolean)
+  if (parts.length) return parts.join(' ')
+  return user.value?.user_metadata?.full_name ?? user.value?.email ?? ''
+})
 
 let initialisePromise: Promise<void> | null = null
 let unsubscribe: (() => void) | null = null
@@ -21,6 +28,8 @@ let unsubscribe: (() => void) | null = null
 function resetAuthState() {
   user.value = null
   role.value = 'guest'
+  firstName.value = ''
+  lastName.value = ''
 }
 
 function errorMessage(err: unknown): string {
@@ -46,21 +55,75 @@ function redirectUrl(): string {
   return '/auth/callback'
 }
 
-async function loadRole(userId: string) {
+function metaValue(u: User, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const val = (u.user_metadata as Record<string, unknown> | null | undefined)?.[key]
+    if (typeof val === 'string' && val.trim().length) return val.trim()
+  }
+  return undefined
+}
+
+async function syncProfile(u: User) {
+  const metaFirst = metaValue(u, ['first_name', 'firstName', 'given_name'])
+  const metaLast = metaValue(u, ['last_name', 'lastName', 'family_name'])
+
+  let profile: { role: string | null; first_name: string | null; last_name: string | null } | null = null
+
   const { data, error } = await supabase
     .from('utilisateurs')
-    .select('role')
-    .eq('id', userId)
+    .select('role, first_name, last_name')
+    .eq('id', u.id)
     .maybeSingle()
 
-  if (error) {
-    console.warn('[useAuth] Unable to load role:', error.message)
-    role.value = 'user'
-    return
+  if (error && error.code !== 'PGRST116') {
+    console.warn('[useAuth] Unable to load profile:', error.message)
+  } else {
+    profile = data ?? null
   }
 
-  const rawRole = typeof data?.role === 'string' ? data.role.toLowerCase() : null
-  role.value = rawRole === 'admin' ? 'admin' : 'user'
+  if (!profile) {
+    const insertPayload = {
+      id: u.id,
+      role: 'user' as const,
+      first_name: metaFirst ?? null,
+      last_name: metaLast ?? null,
+    }
+    const { data: inserted, error: insertError } = await supabase
+      .from('utilisateurs')
+      .insert(insertPayload)
+      .select('role, first_name, last_name')
+      .single()
+
+    if (insertError) {
+      console.warn('[useAuth] Unable to insert profile:', insertError.message)
+    } else {
+      profile = inserted
+    }
+  } else {
+    const updatePayload: Record<string, string | null> = {}
+    if (metaFirst && metaFirst !== profile.first_name) updatePayload.first_name = metaFirst
+    if (metaLast && metaLast !== profile.last_name) updatePayload.last_name = metaLast
+
+    if (Object.keys(updatePayload).length) {
+      const { data: updated, error: updateError } = await supabase
+        .from('utilisateurs')
+        .update(updatePayload)
+        .eq('id', u.id)
+        .select('role, first_name, last_name')
+        .single()
+
+      if (updateError) {
+        console.warn('[useAuth] Unable to update profile:', updateError.message)
+      } else {
+        profile = updated
+      }
+    }
+  }
+
+  const effectiveRole = profile?.role?.toLowerCase() === 'admin' ? 'admin' : 'user'
+  role.value = effectiveRole
+  firstName.value = profile?.first_name ?? metaFirst ?? ''
+  lastName.value = profile?.last_name ?? metaLast ?? ''
 }
 
 async function applySession(session: Session | null) {
@@ -69,10 +132,12 @@ async function applySession(session: Session | null) {
 
   if (!nextUser) {
     role.value = 'guest'
+    firstName.value = ''
+    lastName.value = ''
     return
   }
 
-  await loadRole(nextUser.id)
+  await syncProfile(nextUser)
 }
 
 export async function refreshSession() {
@@ -131,15 +196,27 @@ export function getCurrentUser() {
   return user.value
 }
 
-export async function signUpWithEmail(email: string, password: string) {
+export async function signUpWithEmail(params: { email: string; password: string; firstName: string; lastName: string }) {
+  const { email, password, firstName: fn, lastName: ln } = params
   return runWithState(async () => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: redirectUrl() },
+      options: {
+        emailRedirectTo: redirectUrl(),
+        data: {
+          first_name: fn,
+          last_name: ln,
+          full_name: `${fn} ${ln}`.trim(),
+        },
+      },
     })
 
     if (error) throw error
+
+    if (data?.user) {
+      await syncProfile(data.user)
+    }
     return data
   })
 }
@@ -207,8 +284,11 @@ export {
   authReady,
   authLoading,
   authError,
+  firstName,
+  lastName,
   isAuthenticated,
   isAdmin,
+  displayName,
 }
 
 export default {
@@ -226,6 +306,9 @@ export default {
   authReady,
   authLoading,
   authError,
+  firstName,
+  lastName,
   isAuthenticated,
   isAdmin,
+  displayName,
 }

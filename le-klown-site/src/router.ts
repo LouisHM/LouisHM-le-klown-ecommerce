@@ -19,7 +19,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/events', component: Events },
   { path: '/admin', component: Admin, meta: { requiresAdmin: true } }, // ✅ admin only
   { path: '/useTerms', component: UsageConditions },
-  { path: '/confidentialityConditions', component: ConfidentialityConditions },
+  { path: '/privacy', component: ConfidentialityConditions },
   { path: '/auth/callback', component: AuthCallback },
   { path: '/403', component: { template: '<div class="pt-24 text-center text-light">403 – Forbidden</div>' } },
   { path: '/:pathMatch(.*)*', component: NotFound },

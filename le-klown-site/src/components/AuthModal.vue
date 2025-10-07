@@ -46,6 +46,17 @@
 
             <!-- Email form -->
             <form class="space-y-3" @submit.prevent="submit">
+              <div v-if="mode==='signup'" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="space-y-1">
+                  <label class="text-xs uppercase tracking-wide text-light/60">{{ t('auth.firstName') || 'Prénom' }}</label>
+                  <input v-model.trim="firstName" type="text" required class="form-input" :placeholder="t('auth.firstNamePlaceholder') || 'Louis'" />
+                </div>
+                <div class="space-y-1">
+                  <label class="text-xs uppercase tracking-wide text-light/60">{{ t('auth.lastName') || 'Nom' }}</label>
+                  <input v-model.trim="lastName" type="text" required class="form-input" :placeholder="t('auth.lastNamePlaceholder') || 'Maury'" />
+                </div>
+              </div>
+
               <div class="space-y-1">
                 <label class="text-xs uppercase tracking-wide text-light/60">{{ t('auth.email') }}</label>
                 <input v-model.trim="email" type="email" required class="form-input" placeholder="name@email.com" />
@@ -66,7 +77,7 @@
 
               <button
                 type="submit"
-                :disabled="authLoading || (mode==='signup' && password!==confirm)"
+                :disabled="authLoading || (mode==='signup' && (password!==confirm || !firstName || !lastName))"
                 class="w-full py-3 rounded-xl bg-primary text-light font-semibold hover:bg-light hover:text-dark transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <span v-if="mode==='signin'">{{ t('auth.signIn') }}</span>
@@ -119,6 +130,8 @@ const mode = ref<'signin' | 'signup'>(props.defaultMode ?? 'signin')
 const email = ref('')
 const password = ref('')
 const confirm = ref('')
+const firstName = ref('')
+const lastName = ref('')
 
 const success = ref<string | null>(null)
 const panel = ref<HTMLElement | null>(null)
@@ -133,6 +146,8 @@ watch(() => props.visible, (v) => {
     email.value = ''
     password.value = ''
     confirm.value = ''
+    firstName.value = ''
+    lastName.value = ''
     success.value = null
     clearAuthError()
   }
@@ -153,7 +168,12 @@ async function submit() {
       setTimeout(() => emit('close'), 800)
     } else {
       if (password.value !== confirm.value) return
-      await signUpWithEmail(email.value, password.value)
+      await signUpWithEmail({
+        email: email.value,
+        password: password.value,
+        firstName: firstName.value,
+        lastName: lastName.value,
+      })
       success.value = t('auth.checkInbox') || 'Check your inbox to confirm your email.'
     }
   } catch {

@@ -12,31 +12,39 @@ export interface CartItem {
 
 const state = reactive<{ items: CartItem[] }>({ items: [] })
 
+function findIndex(productId: string, size?: string) {
+  return state.items.findIndex(i => i.productId === productId && i.size === size)
+}
+
 export function useCart() {
   const items = computed(() => state.items)
 
   function addItem(item: CartItem) {
-    const existing = state.items.find(
-      i => i.productId === item.productId && i.size === item.size
-    )
-    if (existing) {
-      existing.quantity += item.quantity
+    const idx = findIndex(item.productId, item.size)
+    if (idx >= 0) {
+      state.items[idx].quantity += item.quantity
     } else {
       state.items.push({ ...item })
     }
   }
 
-  function removeItem(index: number) {
-    state.items.splice(index, 1)
+  function removeItem(productId: string, size?: string) {
+    const idx = findIndex(productId, size)
+    if (idx >= 0) state.items.splice(idx, 1)
+  }
+
+  function updateQuantity(productId: string, size: string | undefined, quantity: number) {
+    const idx = findIndex(productId, size)
+    if (idx >= 0) state.items[idx].quantity = quantity
   }
 
   function clearCart() {
-    state.items.splice(0) // keep array reactive
+    state.items.splice(0)
   }
 
   const total = computed(() =>
     state.items.reduce((sum, i) => sum + i.price * i.quantity, 0)
   )
 
-  return { items, total, addItem, removeItem, clearCart }
+  return { items, total, addItem, removeItem, clearCart, updateQuantity }
 }

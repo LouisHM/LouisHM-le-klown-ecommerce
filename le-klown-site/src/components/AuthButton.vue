@@ -15,7 +15,7 @@
       @click="showLogout = true"
       class="ml-4 text-light px-3 py-2 rounded-full hover:bg-light hover:text-dark transition flex items-center gap-2 group"
     >
-      {{ user.user_metadata?.full_name || user.email }}
+      {{ displayName || user.email }}
       <i class="fa-solid fa-right-from-bracket"></i>
     </button>
 
@@ -52,7 +52,7 @@
 import { ref, watch, nextTick, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthModal from '@/components/AuthModal.vue'
-import { user, signOut, authError, clearAuthError, authLoading } from '@/composables/useAuth'
+import { user, signOut, authError, clearAuthError, authLoading, displayName } from '@/composables/useAuth'
 
 const emit = defineEmits<{ (e: 'auth-changed'): void }>()
 

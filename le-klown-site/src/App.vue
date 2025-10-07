@@ -21,7 +21,7 @@
   <CheckoutModal
     :visible="showCheckout"
     :cart-items="checkoutItems"
-    @close="showCheckout = false"
+    @close="closeCheckout"
     @success="onOrderSuccess"
   />
 </template>
@@ -56,6 +56,10 @@ function openCheckout(items: CartItem[]) {
 
 function onOrderSuccess() {
   checkoutItems.value = []
+}
+
+function closeCheckout() {
   showCheckout.value = false
+  checkoutItems.value = []
 }
 </script>

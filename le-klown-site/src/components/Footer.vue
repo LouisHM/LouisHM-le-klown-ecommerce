@@ -20,7 +20,7 @@
         >
           {{ $t('footer.contactMe') }}
         </button>
-        <a href="https://www.leklown.com/confidentialityConditions" target="_blank" rel="noopener" class="hover:text-primary transition text-xs"> {{ t('legal.privacy.title', { appName }) }} <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+        <a href="https://www.leklown.com/privacy" target="_blank" rel="noopener" class="hover:text-primary transition text-xs"> {{ t('legal.privacy.title', { appName }) }} <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
         <a href="https://www.leklown.com/useTerms" target="_blank" rel="noopener" class="hover:text-primary transition text-xs"> {{ t('legal.tos.title', { appName }) }} <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
 
       </div>

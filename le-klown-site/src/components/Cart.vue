@@ -137,7 +137,7 @@
           <div class="flex gap-3">
             <button
               class="flex-1 bg-light text-dark font-semibold py-2.5 rounded-lg hover:brightness-95 transition"
-              @click="emit('checkout', [...items])"
+              @click="startCheckout"
               :disabled="items.length === 0"
             >
               {{ t('cart.checkout') || 'Passer au paiement' }}
@@ -158,7 +158,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, unref, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCart } from '@/composables/useCart'
 
@@ -170,16 +170,12 @@ const emit = defineEmits<{
   (e:'checkout', items:any[]): void
 }>()
 
+const isOpen = computed<boolean>(() => !!props.open)
+function openCart()  { emit('update:open', true) }
 function closeCart() { emit('update:open', false) }
 
-/* État d'ouverture robuste (contrôlé OU interne) */
-const internalOpen = ref(false)
-const isOpen = computed<boolean>(() => internalOpen.value || !!props.open)
-function openCart()  { internalOpen.value = true;  emit('update:open', true) }
-watch(() => props.open, (v) => { if (typeof v === 'boolean') internalOpen.value = !!v })
-
 /* Store panier */
-const cart = useCart() as any
+const cart = useCart()
 
 type CartItem = {
   productId: string
@@ -191,38 +187,12 @@ type CartItem = {
   stockStatus?: 'inStock' | 'lowStock' | 'outOfStock'
 }
 
-/* Helpers de normalisation -> tableau sûr */
-function toArray(maybe: any): CartItem[] {
-  const v = unref(maybe)
-  if (!v) return []
-  if (Array.isArray(v)) return v as CartItem[]
-  if (v instanceof Map) return Array.from(v.values()) as CartItem[]
-  if (typeof v === 'object') {
-    if (Array.isArray((v as any).items)) return (v as any).items as CartItem[]
-    const values = Object.values(v)
-    if (values.every(x => typeof x === 'object')) return values as CartItem[]
-    return []
-  }
-  if (typeof v === 'string') {
-    try { const parsed = JSON.parse(v); return Array.isArray(parsed) ? (parsed as CartItem[]) : [] }
-    catch { return [] }
-  }
-  return []
-}
-function firstNonEmpty<T>(...lists: T[][]): T[] {
-  for (const l of lists) if (l && l.length) return l
-  return []
-}
-
 /* Sélecteurs */
 const items = computed<CartItem[]>(() => {
-  const candidates = [
-    toArray(cart.items),
-    toArray(cart.cartItems),
-    toArray(cart.value?.items),
-    toArray(cart.value),
-  ]
-  return firstNonEmpty<CartItem>(...candidates)
+  const raw = cart.items
+  if (Array.isArray(raw)) return raw
+  if (raw && Array.isArray((raw as any).value)) return (raw as any).value
+  return []
 })
 const count = computed<number>(() =>
   items.value.reduce((n, it) => n + (Number(it.quantity) || 0), 0)
@@ -242,34 +212,20 @@ function lineTotal(it: CartItem) {
 }
 function setQty(it: CartItem, q: number) {
   const newQ = Math.max(1, Math.min(Number(q) || 1, 999))
-  if (typeof cart.updateQuantity === 'function') {
-    cart.updateQuantity(it.productId, it.size, newQ)
-  } else if (typeof cart.updateItem === 'function') {
-    cart.updateItem({ ...it, quantity: newQ })
-  } else if (Array.isArray(cart.items)) {
-    const idx = cart.items.findIndex((x: CartItem) => x.productId === it.productId && x.size === it.size)
-    if (idx >= 0) cart.items[idx].quantity = newQ
-  } else {
-    it.quantity = newQ
-  }
+  cart.updateQuantity(it.productId, it.size, newQ)
 }
 function inc(it: CartItem) { setQty(it, (Number(it.quantity) || 1) + 1) }
 function dec(it: CartItem) { setQty(it, (Number(it.quantity) || 1) - 1) }
 function remove(it: CartItem) {
-  if (typeof cart.removeItem === 'function') {
-    cart.removeItem(it.productId, it.size)
-  } else if (typeof cart.remove === 'function') {
-    cart.remove(it)
-  } else if (Array.isArray(cart.items)) {
-    cart.items = cart.items.filter((x: CartItem) =>
-      !(x.productId === it.productId && x.size === it.size)
-    )
-  }
+  cart.removeItem(it.productId, it.size)
 }
 function clearCart() {
-  if (typeof cart.clear === 'function') cart.clear()
-  else if (typeof cart.reset === 'function') cart.reset()
-  else if (Array.isArray(cart.items)) cart.items = []
+  cart.clearCart()
+}
+
+function startCheckout() {
+  const payload = items.value.map(it => ({ ...it }))
+  emit('checkout', payload)
 }
 
 /* Libellés */
