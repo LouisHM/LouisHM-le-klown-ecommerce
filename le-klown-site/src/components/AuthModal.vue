@@ -113,9 +113,9 @@ import {
 
 const { t } = useI18n()
 const props = defineProps<{ visible: boolean; defaultMode?: 'signin' | 'signup' }>()
-defineEmits<{ (e: 'close'): void }>()
+const emit = defineEmits<{ (e: 'close'): void }>()
 
-const mode = ref<'signin' | 'signup'>(props.defaultMode ?? 'signup')
+const mode = ref<'signin' | 'signup'>(props.defaultMode ?? 'signin')
 const email = ref('')
 const password = ref('')
 const confirm = ref('')
@@ -125,9 +125,22 @@ const panel = ref<HTMLElement | null>(null)
 
 watch(() => props.visible, (v) => {
   if (v) {
+    mode.value = props.defaultMode ?? 'signin'
     success.value = null
     clearAuthError()
     setTimeout(() => panel.value?.focus(), 0)
+  } else {
+    email.value = ''
+    password.value = ''
+    confirm.value = ''
+    success.value = null
+    clearAuthError()
+  }
+})
+
+watch(() => props.defaultMode, (val) => {
+  if (!props.visible) {
+    mode.value = val ?? 'signin'
   }
 })
 
@@ -137,6 +150,7 @@ async function submit() {
     if (mode.value === 'signin') {
       await signInWithEmail(email.value, password.value)
       success.value = t('auth.signedIn') || 'Signed in!'
+      setTimeout(() => emit('close'), 800)
     } else {
       if (password.value !== confirm.value) return
       await signUpWithEmail(email.value, password.value)

@@ -19,12 +19,14 @@
 
     <!-- SECTION ÉVÉNEMENTS -->
     <section v-if="mode === 'events'" class="space-y-12">
-      <AdminEventForm
-        :key="formEvent?.id || 'new-event'"
-        :event="formEvent"
-        @saved="onEventSaved"
-        class="max-w-3xl mx-auto"
-      />
+      <div ref="eventFormContainer">
+        <AdminEventForm
+          :key="formEvent?.id || 'new-event'"
+          :event="formEvent"
+          @saved="onEventSaved"
+          class="max-w-3xl mx-auto"
+        />
+      </div>
 
       <!-- À venir -->
       <h2 class="text-3xl font-heading text-light uppercase mb-6 text-start">
@@ -94,12 +96,14 @@
 
     <!-- SECTION PRODUITS -->
     <section v-else class="space-y-12">
-      <AdminProductForm
-        :key="selectedProduct?.id || 'new-product'"
-        :product="selectedProduct"
-        @saved="onProductSaved"
-        class="max-w-3xl mx-auto"
-      />
+      <div ref="productFormContainer">
+        <AdminProductForm
+          :key="selectedProduct?.id || 'new-product'"
+          :product="selectedProduct"
+          @saved="onProductSaved"
+          class="max-w-3xl mx-auto"
+        />
+      </div>
 
       <div>
         <h2 class="text-3xl font-heading text-primary mb-6">{{ $t('shop.title') }}</h2>
@@ -154,7 +158,7 @@
               <button
                 @pointerdown.stop
                 @click.stop.prevent="confirmDelete('product', p.id)"
-                class="px-3 py-1 bg-primary text-dark rounded hover:opacity-90 transition"
+                class="px-3 py-1 bg-primary text-light rounded hover:opacity-90 transition"
               >
                 {{ $t('admin.delete') }}
               </button>
@@ -170,10 +174,11 @@
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
     >
       <div class="bg-light text-dark p-6 rounded-lg shadow-lg space-y-4 w-[90%] max-w-md">
-        <h2 class="text-2xl font-heading mb-4">{{ $t('admin.confirmDelete') }}</h2>
+        <h2 class="text-2xl font-heading mb-2">{{ $t('admin.confirmDelete') }}</h2>
+        <p v-if="deleteError" class="text-sm text-red-600">{{ deleteError }}</p>
         <div class="flex justify-end space-x-4 mt-6">
           <button
-            @click="showConfirm = false"
+            @click="closeConfirm()"
             class="px-4 py-2 rounded border border-dark hover:bg-gray-200"
           >
             {{ $t('admin.cancel') }}
@@ -202,7 +207,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { supabase } from '@/supabase/client'
 import EventCard from '@/components/EventCard.vue'
 import AdminEventForm from '@/components/AdminEventForm.vue'
@@ -218,6 +223,9 @@ const formEvent = ref<any|null>(null)
 const modalEvent = ref<any|null>(null)
 const selectedProduct = ref<Product|null>(null)
 const showConfirm = ref(false)
+const deleteError = ref<string | null>(null)
+const eventFormContainer = ref<HTMLElement | null>(null)
+const productFormContainer = ref<HTMLElement | null>(null)
 let deleteTarget: { type: 'event'|'product'; id: any } | null = null
 
 // CSS classes
@@ -227,33 +235,83 @@ const inactiveClass = 'px-4 py-2 rounded-t-lg bg-dark border border-light hover:
 // Fetch events
 async function fetchEvents() {
   const { data, error } = await supabase.from('evenements').select('*').order('date', { ascending: true })
-  if (error) console.error('[Admin] fetchEvents error:', error)
+  if (error) {
+    console.error('[Admin] fetchEvents error:', error)
+    return
+  }
   events.value = data || []
 }
-function editEvent(e: any) { formEvent.value = { ...e } }
-function onEventSaved() { formEvent.value = null; fetchEvents() }
+
+function scrollToForm(section: 'events' | 'products') {
+  const target = section === 'events' ? eventFormContainer.value : productFormContainer.value
+  nextTick(() => {
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    else window.scrollTo({ top: 0, behavior: 'smooth' })
+  })
+}
+
+function editEvent(e: any) {
+  mode.value = 'events'
+  formEvent.value = { ...e }
+  scrollToForm('events')
+}
+
+async function onEventSaved() {
+  formEvent.value = null
+  await fetchEvents()
+  scrollToForm('events')
+}
 
 // Products
 const { products, fetchProducts, deleteProduct } = useProducts()
-function editProduct(p: Product) { selectedProduct.value = { ...p } }
-function onProductSaved() { selectedProduct.value = null; fetchProducts() }
+
+function editProduct(p: Product) {
+  mode.value = 'products'
+  selectedProduct.value = { ...p }
+  scrollToForm('products')
+}
+
+async function onProductSaved() {
+  selectedProduct.value = null
+  await fetchProducts()
+  scrollToForm('products')
+}
 
 // Delete confirm
 function confirmDelete(type: 'event'|'product', id: any) {
   deleteTarget = { type, id }
   showConfirm.value = true
+  deleteError.value = null
 }
+function closeConfirm() {
+  showConfirm.value = false
+  deleteTarget = null
+  deleteError.value = null
+}
+
 async function performDelete() {
   if (!deleteTarget) return
-  if (deleteTarget.type === 'event') {
-    await supabase.from('evenements').delete().eq('id', deleteTarget.id)
-    await fetchEvents()
-  } else {
-    await deleteProduct(deleteTarget.id)
-    await fetchProducts()
+  deleteError.value = null
+
+  try {
+    if (deleteTarget.type === 'event') {
+      const { error } = await supabase.from('evenements').delete().eq('id', deleteTarget.id)
+      if (error) throw error
+      await fetchEvents()
+    } else {
+      const { data, error } = await deleteProduct(deleteTarget.id)
+      if (error) throw error
+      if (!data || data.deleted !== true) {
+        throw new Error('La suppression n’a pas été confirmée par Supabase.')
+      }
+      await fetchProducts()
+    }
+    closeConfirm()
+  } catch (err: any) {
+    console.error('[Admin] performDelete error:', err)
+    const message = err?.message || err?.error_description || 'Suppression impossible.'
+    deleteError.value = message
   }
-  deleteTarget = null
-  showConfirm.value = false
 }
 
 // INIT

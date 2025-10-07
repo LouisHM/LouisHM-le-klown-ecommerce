@@ -52,8 +52,25 @@ onMounted(async () => {
 
   try {
     if (hasQueryParam(href, 'code')) {
-      const { error } = await supabase.auth.exchangeCodeForSession(href)
-      if (error) throw error
+      const projectRef = (() => {
+        try {
+          return new URL(import.meta.env.VITE_SUPABASE_URL as string).host.split('.')[0]
+        } catch {
+          return null
+        }
+      })()
+
+      const verifierKey = projectRef ? `sb-${projectRef}-auth-code-verifier` : null
+      const hasVerifier = verifierKey
+        ? (window.localStorage.getItem(verifierKey) || window.sessionStorage.getItem(verifierKey))
+        : null
+
+      if (hasVerifier) {
+        const { error } = await supabase.auth.exchangeCodeForSession(href)
+        if (error) throw error
+      } else {
+        console.warn('[AuthCallback] Missing PKCE verifier; skipping exchange')
+      }
     } else if (hasHashParam(href, 'access_token')) {
       const { error } = await supabase.auth.getSession()
       if (error) throw error

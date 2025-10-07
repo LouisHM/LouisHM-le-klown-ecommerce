@@ -87,14 +87,15 @@ export function useProducts() {
 
   /** Soft-delete a product (admin only) */
   async function deleteProduct(id: string) {
+    // Soft-delete (set deleted=true) but return the updated row so clients can react
     const { data, error: err } = await supabase
       .from(TABLE)
       .update({ deleted: true })
       .eq('id', id)
-      .select('*')
+      .select('id, deleted, name')
       .single()
 
-    return { data: (data ?? null) as unknown as Product | null, error: err }
+    return { data, error: err }
   }
 
   function humanizeErr(e: any) {

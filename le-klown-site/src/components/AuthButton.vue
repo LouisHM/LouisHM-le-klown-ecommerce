@@ -44,7 +44,7 @@
     </Teleport>
 
     <!-- Modal d’auth (email + Google) -->
-    <AuthModal :visible="showAuth" defaultMode="signup" @close="showAuth = false" />
+    <AuthModal :visible="showAuth" defaultMode="signin" @close="showAuth = false" />
   </div>
 </template>
 
@@ -79,7 +79,21 @@ async function handleSignOut() {
     await signOut()
     showLogout.value = false
     emit('auth-changed')
-    await router.replace('/')
+
+    if (typeof window !== 'undefined') {
+      try {
+        const current = new URL(window.location.href)
+        current.searchParams.delete('code')
+        current.searchParams.delete('state')
+        window.history.replaceState({}, document.title, `${current.pathname}${current.search}${current.hash}`)
+      } catch (err) {
+        console.warn('[AuthButton] unable to sanitise URL after logout', err)
+      }
+
+      window.location.href = `${window.location.origin}/`
+    } else {
+      await router.replace('/')
+    }
   } catch (err) {
     console.error('[AuthButton] signOut failed:', err)
   }

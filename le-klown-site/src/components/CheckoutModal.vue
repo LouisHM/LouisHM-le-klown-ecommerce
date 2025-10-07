@@ -166,6 +166,7 @@
 import { computed, reactive, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toUnitPriceEUR } from '@/utils/price'
+import { user as authUser } from '@/composables/useAuth'
 
 const { t } = useI18n()
 
@@ -238,6 +239,50 @@ const isValid = computed(() =>
   !!form.address &&
   /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)
 )
+
+function tryFill(target: 'firstName' | 'lastName' | 'email', value?: string | null) {
+  if (!value) return
+  if (typeof value !== 'string') return
+  if (form[target]) return
+  form[target] = value.trim()
+}
+
+function prefillFromUser() {
+  const current = authUser.value
+  if (!current) return
+
+  tryFill('email', current.email)
+
+  const meta = (current.user_metadata ?? {}) as Record<string, any>
+  tryFill('firstName', meta.first_name || meta.given_name)
+  tryFill('lastName', meta.last_name || meta.family_name)
+
+  if (!form.firstName || !form.lastName) {
+    const full = typeof meta.full_name === 'string' ? meta.full_name : typeof meta.name === 'string' ? meta.name : ''
+    if (full) {
+      const parts = full.trim().split(/\s+/)
+      if (parts.length === 1) {
+        tryFill('firstName', parts[0])
+      } else if (parts.length > 1) {
+        tryFill('firstName', parts[0])
+        tryFill('lastName', parts.slice(1).join(' '))
+      }
+    }
+  }
+}
+
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible) prefillFromUser()
+  }
+)
+
+watch(authUser, (next, prev) => {
+  if (props.visible && next?.id !== prev?.id) {
+    prefillFromUser()
+  }
+})
 
 // Actions
 function onClose() { emit('close') }

@@ -172,11 +172,32 @@ export async function sendPasswordReset(email: string) {
   })
 }
 
+function purgeLocalTokens() {
+  if (typeof window === 'undefined') return
+  try {
+    const projectRef = new URL(import.meta.env.VITE_SUPABASE_URL as string).host.split('.')[0]
+    const prefixes = [`sb-${projectRef}-`, 'supabase.auth.']
+    prefixes.forEach(prefix => {
+      Object.keys(window.localStorage).forEach((key) => {
+        if (key.startsWith(prefix)) window.localStorage.removeItem(key)
+      })
+      Object.keys(window.sessionStorage).forEach((key) => {
+        if (key.startsWith(prefix)) window.sessionStorage.removeItem(key)
+      })
+    })
+  } catch (err) {
+    console.warn('[useAuth] Unable to purge local Supabase tokens', err)
+  }
+}
+
 export async function signOut() {
   return runWithState(async () => {
-    const { error } = await supabase.auth.signOut({ scope: 'global' })
+    const { error } = await supabase.auth.signOut({ scope: 'local' })
     if (error) throw error
-    await refreshSession()
+
+    purgeLocalTokens()
+    resetAuthState()
+    authReady.value = true
   })
 }
 
