@@ -1,198 +1,202 @@
 <template>
   <!-- Cas admin -->
   <div v-if="ready && role === 'admin'" class="pt-24 px-4 md:px-10 min-h-screen bg-dark text-light">
-    <!-- Mini-nav secondaire -->
-    <div class="flex space-x-4 justify-center">
-      <button
-        @click="mode = 'events'"
-        :class="mode === 'events' ? activeClass : inactiveClass"
-      >
-        {{ $t('admin.tabEvents') }}
-      </button>
-      <button
-        @click="mode = 'products'"
-        :class="mode === 'products' ? activeClass : inactiveClass"
-      >
-        {{ $t('admin.tabProducts') }}
-      </button>
-      <button
-        @click="mode = 'orders'"
-        :class="mode === 'orders' ? activeClass : inactiveClass"
-      >
-        {{ $t('admin.tabOrders') || 'Commandes' }}
-      </button>
-    </div>
-
-    <!-- SECTION ÉVÉNEMENTS -->
-    <section v-if="mode === 'events'" class="space-y-12">
-      <div ref="eventFormContainer">
-        <AdminEventForm
-          :key="formEvent?.id || 'new-event'"
-          :event="formEvent"
-          @saved="onEventSaved"
-          class="max-w-3xl mx-auto"
-        />
+    <div class="max-w-6xl mx-auto space-y-10">
+      <!-- Mini-nav secondaire -->
+      <div class="flex flex-wrap justify-center gap-2 md:gap-3">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          @click="mode = tab.id"
+          :class="navBtnClass(tab.id)"
+        >
+          {{ tab.label }}
+        </button>
       </div>
 
-      <!-- À venir -->
-      <h2 class="text-3xl font-heading text-light uppercase mb-6 text-start">
-        {{ $t('events.upcoming') }}
-      </h2>
-      <ul class="flex justify-center md:justify-start flex-wrap gap-4 mb-12">
-        <li
-          v-for="event in upcomingEvents"
-          :key="event.id"
-          class="relative"
-          @click="openModal(event)"
+      <!-- SECTION ÉVÉNEMENTS -->
+      <section v-if="mode === 'events'" class="space-y-8">
+        <div
+          ref="eventFormContainer"
+          class="bg-backgroundDark/80 border border-light/10 rounded-2xl p-6 shadow-lg"
         >
-          <EventCard :event="event" class="pointer-events-none" />
-          <div class="absolute top-2 right-2 z-50 flex gap-2 pointer-events-auto">
-            <button
-              @pointerdown.stop
-              @click.stop.prevent="editEvent(event)"
-              class="px-2 py-1 rounded-md bg-backgroundDark/80 border border-light/20 hover:bg-backgroundDark text-sm"
-            >
-              {{ $t('admin.edit') }}
-            </button>
-            <button
-              @pointerdown.stop
-              @click.stop.prevent="confirmDelete('event', event.id)"
-              class="px-2 py-1 rounded-md bg-red-600/90 hover:bg-red-600 text-light text-sm"
-            >
-              {{ $t('admin.delete') }}
-            </button>
-          </div>
-        </li>
-      </ul>
+          <AdminEventForm
+            :key="formEvent?.id || 'new-event'"
+            :event="formEvent"
+            @saved="onEventSaved"
+          />
+        </div>
 
-      <!-- Passés -->
-      <h2 class="text-3xl font-heading text-light uppercase mb-6 text-start">
-        {{ $t('events.past') }}
-      </h2>
-      <ul class="flex justify-center md:justify-start flex-wrap gap-4">
-        <li
-          v-for="event in pastEvents"
-          :key="event.id"
-          class="relative grayscale opacity-60 hover:opacity-90 transition"
-          @click="openModal(event)"
-        >
-          <EventCard :event="event" class="pointer-events-none" />
-          <div class="absolute top-2 right-2 z-50 flex gap-2 pointer-events-auto">
-            <button
-              @pointerdown.stop
-              @click.stop.prevent="editEvent(event)"
-              class="px-2 py-1 rounded-md bg-backgroundDark/80 border border-light/20 hover:bg-backgroundDark text-sm"
-            >
-              {{ $t('admin.edit') }}
-            </button>
-            <button
-              @pointerdown.stop
-              @click.stop.prevent="confirmDelete('event', event.id)"
-              class="px-2 py-1 rounded-md bg-red-600/90 hover:bg-red-600 text-light text-sm"
-            >
-              {{ $t('admin.delete') }}
-            </button>
-          </div>
-        </li>
-      </ul>
-
-      <!-- Modal Détails -->
-      <EventModal v-if="modalEvent" :event="modalEvent" @close="modalEvent = null" />
-    </section>
-
-    <!-- SECTION PRODUITS -->
-    <section v-else-if="mode === 'products'" class="space-y-12">
-      <div ref="productFormContainer">
-        <AdminProductForm
-          :key="selectedProduct?.id || 'new-product'"
-          :product="selectedProduct"
-          @saved="onProductSaved"
-          class="max-w-3xl mx-auto"
-        />
-      </div>
-
-      <div>
-        <h2 class="text-3xl font-heading text-primary mb-6">{{ $t('shop.title') }}</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div
-            v-for="p in products"
-            :key="p.id"
-            class="bg-gray-800 p-4 rounded-lg flex flex-col border border-light/10"
+        <!-- À venir -->
+        <div class="space-y-4">
+          <h2 class="text-3xl font-heading uppercase tracking-widest">{{ $t('events.upcoming') }}</h2>
+          <ul class="flex flex-wrap gap-4 justify-center md:justify-start">
+          <li
+            v-for="event in upcomingEvents"
+            :key="event.id"
+            class="relative"
+            @click="openModal(event)"
           >
-            <!-- Image principale -->
-            <div class="relative aspect-[4/3] bg-backgroundDark rounded-md overflow-hidden">
-              <img
-                v-if="firstImage(p)"
-                :src="firstImage(p) ?? undefined"
-                alt=""
-                class="w-full h-full object-cover"
-                @error="onImgError($event)"
-              />
-              <div v-else class="w-full h-full grid place-items-center text-xs opacity-60">
-                {{ $t('admin.noImage') || 'Aucune image' }}
-              </div>
-            </div>
-
-            <h3 class="mt-3 font-semibold text-lg">{{ p.name }}</h3>
-            <p class="text-sm text-gray-400 truncate">{{ p.description }}</p>
-            <div class="mt-2 flex-1">
-              <span class="font-bold">{{ (Number(p.price) || 0).toFixed(2) }} €</span>
-              <span v-if="p.has_sizes" class="ml-2 text-sm">
-                {{ $t('admin.sizes') }}: {{ (p.sizes || []).join(', ') }}
-              </span>
-            </div>
-
-            <!-- Miniatures -->
-            <div v-if="(p.images || []).length > 1" class="mt-2 flex gap-2 overflow-x-auto">
-              <img
-                v-for="(img, i) in p.images"
-                :key="i"
-                :src="img"
-                class="w-12 h-12 rounded-md object-cover border border-light/10"
-                alt=""
-              />
-            </div>
-
-            <div class="flex gap-2 mt-4">
+            <EventCard :event="event" class="cursor-pointer" />
+            <div class="absolute top-3 right-3 flex gap-2 pointer-events-auto">
               <button
                 @pointerdown.stop
-                @click.stop.prevent="editProduct(p)"
-                class="px-3 py-1 text-light border rounded hover:bg-light hover:text-dark transition"
+                @click.stop.prevent="editEvent(event)"
+                class="btn btn-secondary btn-sm"
               >
                 {{ $t('admin.edit') }}
               </button>
               <button
                 @pointerdown.stop
-                @click.stop.prevent="confirmDelete('product', p.id)"
-                class="px-3 py-1 bg-primary text-light rounded hover:opacity-90 transition"
+                @click.stop.prevent="confirmDelete('event', event.id)"
+                class="btn btn-red btn-sm"
               >
                 {{ $t('admin.delete') }}
               </button>
             </div>
+          </li>
+          </ul>
+        </div>
+
+        <div class="space-y-4">
+          <h2 class="text-3xl font-heading uppercase tracking-widest">{{ $t('events.past') }}</h2>
+          <ul class="flex flex-wrap gap-4 justify-center md:justify-start">
+          <li
+            v-for="event in pastEvents"
+            :key="event.id"
+            class="relative opacity-75 hover:opacity-100 transition"
+            @click="openModal(event)"
+          >
+            <EventCard :event="event" class="cursor-pointer" />
+            <div class="absolute top-3 right-3 flex gap-2 pointer-events-auto">
+              <button
+                @pointerdown.stop
+                @click.stop.prevent="editEvent(event)"
+                class="btn btn-secondary btn-sm"
+              >
+                {{ $t('admin.edit') }}
+              </button>
+              <button
+                @pointerdown.stop
+                @click.stop.prevent="confirmDelete('event', event.id)"
+                class="btn btn-red btn-sm"
+              >
+                {{ $t('admin.delete') }}
+              </button>
+            </div>
+          </li>
+          </ul>
+        </div>
+
+        <EventModal v-if="modalEvent" :event="modalEvent" @close="modalEvent = null" />
+      </section>
+
+      <!-- SECTION PRODUITS -->
+      <section v-else-if="mode === 'products'" class="space-y-8">
+        <div
+          ref="productFormContainer"
+          class="bg-backgroundDark/80 border border-light/10 rounded-2xl p-6 shadow-lg"
+        >
+          <AdminProductForm
+            :key="selectedProduct?.id || 'new-product'"
+            :product="selectedProduct"
+            @saved="onProductSaved"
+          />
+        </div>
+
+        <div class="space-y-4">
+          <h2 class="text-3xl font-heading uppercase tracking-widest text-primary">{{ $t('shop.title') }}</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div
+              v-for="p in products"
+              :key="p.id"
+              class="bg-backgroundDark/70 border border-light/10 rounded-2xl p-6 flex flex-col gap-4 shadow-lg"
+            >
+              <div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-dark/30">
+                <img
+                  v-if="firstImage(p)"
+                  :src="firstImage(p) ?? undefined"
+                  alt=""
+                  class="w-full h-full object-cover"
+                  @error="onImgError($event)"
+                />
+                <div v-else class="w-full h-full grid place-items-center text-xs opacity-60">
+                  {{ $t('admin.noImage') || 'Aucune image' }}
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1 text-sm text-light/80">
+                <h3 class="text-lg font-semibold text-light">{{ p.name }}</h3>
+                <p class="line-clamp-2">{{ p.description }}</p>
+                <div class="mt-1 text-light">
+                  <span class="font-bold">{{ (Number(p.price) || 0).toFixed(2) }} €</span>
+                  <span v-if="p.has_sizes" class="ml-2 text-light/70">
+                    {{ $t('admin.sizes') }}: {{ (p.sizes || []).join(', ') }}
+                  </span>
+                </div>
+              </div>
+
+              <div v-if="(p.images || []).length > 1" class="flex gap-2 overflow-x-auto">
+                <img
+                  v-for="(img, i) in p.images"
+                  :key="i"
+                  :src="img"
+                  class="w-12 h-12 rounded-lg object-cover border border-light/10"
+                  alt=""
+                />
+              </div>
+
+              <div class="flex flex-col sm:flex-row gap-2 mt-auto">
+                <button
+                  @pointerdown.stop
+                  @click.stop.prevent="editProduct(p)"
+                  class="btn btn-secondary w-full sm:flex-1"
+                >
+                  {{ $t('admin.edit') }}
+                </button>
+                <button
+                  @pointerdown.stop
+                  @click.stop.prevent="confirmDelete('product', p.id)"
+                  class="btn btn-red w-full sm:flex-1"
+                >
+                  {{ $t('admin.delete') }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
     </section>
 
     <!-- SECTION COMMANDES -->
-    <section v-else class="space-y-6">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h2 class="text-3xl font-heading">{{ $t('admin.ordersTitle') || 'Suivi des commandes' }}</h2>
-        <div class="flex items-center gap-3">
-          <button
-            @click="toggleDeletedOrders"
-            class="px-3 py-1 rounded-lg border border-light/20 hover:bg-light/10"
-          >
-            {{ showDeletedOrders ? ($t('admin.showActiveOrders') || 'Voir les commandes actives') : ($t('admin.showDeletedOrders') || 'Voir les commandes supprimées') }}
-          </button>
-          <button
-            @click="fetchOrders"
-            class="px-3 py-1 rounded-lg bg-primary text-light hover:bg-primary/80"
-          >
-            {{ $t('admin.refresh') || 'Rafraîchir' }}
-          </button>
+      <section v-else class="space-y-6">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <h2 class="text-3xl font-heading uppercase tracking-widest">{{ $t('admin.ordersTitle') || 'Suivi des commandes' }}</h2>
+          <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <label class="flex items-center gap-2 text-sm text-light/70">
+              <span>{{ $t('admin.statusFilterLabel') || 'Filtrer' }} :</span>
+              <select
+                v-model="statusFilter"
+                class="bg-backgroundDark border border-light/20 rounded-full px-3 py-1.5 text-sm focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondaryLight"
+              >
+                <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </label>
+            <div class="flex items-center gap-3">
+              <button
+                @click="toggleDeletedOrders"
+                class="btn btn-secondary"
+              >
+                {{ showDeletedOrders ? ($t('admin.showActiveOrders') || 'Voir les commandes actives') : ($t('admin.showDeletedOrders') || 'Voir les commandes supprimées') }}
+              </button>
+              <button
+                @click="fetchOrders"
+                class="btn btn-white"
+              >
+                {{ $t('admin.refresh') || 'Rafraîchir' }}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
 
       <p class="text-sm opacity-70">{{ $t('admin.ordersHint') || 'Les commandes passent automatiquement en “Supprimée” si elles ne sont pas payées sous 48 h.' }}</p>
 
@@ -204,7 +208,7 @@
         <article
           v-for="order in filteredOrders"
           :key="order.id"
-          class="bg-backgroundDark/70 border border-light/10 rounded-xl p-5 space-y-4"
+          class="bg-backgroundDark/80 border border-light/10 rounded-2xl p-6 space-y-4 shadow-lg"
         >
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
@@ -214,23 +218,30 @@
             </div>
             <div class="flex gap-2 flex-wrap">
               <button
+                v-if="prevStatus(order)"
+                @click="revertOrderStatus(order)"
+                class="btn btn-secondary btn-sm"
+              >
+                {{ $t('admin.revertStatus', { status: formatOrderStatus(prevStatus(order) || '') }) || `Revenir à ${formatOrderStatus(prevStatus(order) || '')}` }}
+              </button>
+              <button
                 v-if="nextStatus(order)"
                 @click="advanceOrderStatus(order)"
-                class="px-3 py-1 rounded-lg bg-primary text-light hover:bg-primary/80"
+                class="btn btn-white btn-sm"
               >
                 {{ $t('admin.advanceStatus', { status: formatOrderStatus(nextStatus(order) || '') }) || `Marquer ${formatOrderStatus(nextStatus(order) || '')}` }}
               </button>
               <button
                 v-if="!order.del_flag"
                 @click="markOrderDeleted(order, true)"
-                class="px-3 py-1 rounded-lg bg-red-600 text-light hover:bg-red-500"
+                class="btn btn-red btn-sm"
               >
                 {{ $t('admin.deleteOrder') || 'Supprimer' }}
               </button>
               <button
                 v-else
                 @click="markOrderDeleted(order, false)"
-                class="px-3 py-1 rounded-lg border border-light/30 hover:bg-light/10"
+                class="btn btn-secondary btn-sm"
               >
                 {{ $t('admin.restoreOrder') || 'Restaurer' }}
               </button>
@@ -238,17 +249,17 @@
           </div>
 
           <div class="grid md:grid-cols-2 gap-4 text-sm">
-            <div class="space-y-1">
-              <p class="font-semibold uppercase text-xs tracking-wide opacity-70">{{ $t('admin.customer') || 'Client' }}</p>
+            <div class="space-y-1 bg-backgroundDark/60 border border-light/10 rounded-xl p-4">
+              <p class="text-xs uppercase tracking-[0.25em] font-semibold opacity-70">{{ $t('admin.customer') || 'Client' }}</p>
               <p>{{ order.customer_first_name }} {{ order.customer_last_name }}</p>
               <p>{{ order.customer_email }}</p>
               <p v-if="order.customer_phone">{{ order.customer_phone }}</p>
               <p v-if="order.customer_instagram">Instagram: {{ order.customer_instagram }}</p>
               <p>{{ order.customer_address }}</p>
-              <p v-if="order.customer_notes" class="italic">{{ order.customer_notes }}</p>
+              <p v-if="order.customer_notes" class="italic opacity-80">{{ order.customer_notes }}</p>
             </div>
-            <div class="space-y-1">
-              <p class="font-semibold uppercase text-xs tracking-wide opacity-70">{{ $t('admin.statusTimeline') || 'Statuts' }}</p>
+            <div class="space-y-1 bg-backgroundDark/60 border border-light/10 rounded-xl p-4">
+              <p class="text-xs uppercase tracking-[0.25em] font-semibold opacity-70">{{ $t('admin.statusTimeline') || 'Statuts' }}</p>
               <ul class="space-y-1">
                 <li v-for="entry in buildStatusTimeline(order)" :key="entry.label" class="flex justify-between gap-2">
                   <span>{{ entry.label }}</span>
@@ -259,7 +270,7 @@
           </div>
 
           <div class="space-y-2">
-            <p class="font-semibold uppercase text-xs tracking-wide opacity-70">{{ $t('admin.items') || 'Articles' }}</p>
+            <p class="text-xs uppercase tracking-[0.25em] font-semibold opacity-70">{{ $t('admin.items') || 'Articles' }}</p>
             <ul class="space-y-1 text-sm">
               <li v-for="item in parseOrderItems(order)" :key="item.key" class="flex justify-between gap-2">
                 <span class="truncate">
@@ -277,7 +288,9 @@
           </div>
         </article>
       </div>
-    </section>
+      </section>
+
+    </div>
 
     <!-- Modal confirmation delete -->
     <div
@@ -328,10 +341,12 @@ import EventModal from '@/components/EventModal.vue'
 import { useProducts, type Product } from '@/composables/useProducts'
 import { role, authReady, refreshSession } from '@/composables/useAuth'
 
-const { locale } = useI18n()
+const { t, locale } = useI18n()
+
+type AdminTab = 'events' | 'products' | 'orders'
 
 // State
-const mode = ref<'events' | 'products' | 'orders'>('events')
+const mode = ref<AdminTab>('events')
 const events = ref<any[]>([])
 const formEvent = ref<any|null>(null)
 const modalEvent = ref<any|null>(null)
@@ -346,10 +361,32 @@ const orders = ref<OrderRecord[]>([])
 const ordersLoading = ref(false)
 const ordersError = ref<string | null>(null)
 const showDeletedOrders = ref(false)
+const statusFilter = ref<'all' | OrderStatus>('all')
 
-// CSS classes
-const activeClass   = 'px-4 py-2 rounded-t-lg bg-gray-800 text-light font-semibold'
-const inactiveClass = 'px-4 py-2 rounded-t-lg bg-dark border border-light hover:bg-gray-700'
+const tabs = computed(() => ([
+  { id: 'events' as AdminTab, label: t('admin.tabEvents') },
+  { id: 'products' as AdminTab, label: t('admin.tabProducts') },
+  { id: 'orders' as AdminTab, label: t('admin.tabOrders') || 'Commandes' },
+]))
+
+const navBtnBase = 'px-4 py-2 rounded-full border text-sm md:text-base font-semibold transition-colors duration-200';
+function navBtnClass(tab: AdminTab) {
+  const isActive = mode.value === tab
+  return [
+    navBtnBase,
+    isActive
+      ? 'bg-primary text-light shadow-lg border-primary/70'
+      : 'bg-white/10 text-light/70 hover:text-light hover:bg-white/20 border-white/10'
+  ].join(' ')
+}
+
+const statusOptions = computed(() => ([
+  { value: 'all', label: t('admin.statusAll') || 'Tous les statuts' },
+  { value: 'passée', label: statusLabels['passée'] },
+  { value: 'payée', label: statusLabels['payée'] },
+  { value: 'envoyée', label: statusLabels['envoyée'] },
+  { value: 'livrée', label: statusLabels['livrée'] },
+] as Array<{ value: 'all' | OrderStatus; label: string }>))
 
 // Fetch events
 async function fetchEvents() {
@@ -521,7 +558,14 @@ const statusLabels: Record<OrderStatus, string> = {
 }
 
 const filteredOrders = computed(() =>
-  orders.value.filter(order => showDeletedOrders.value ? order.del_flag : !order.del_flag)
+  orders.value.filter(order => {
+    if (showDeletedOrders.value) {
+      if (!order.del_flag) return false
+    } else if (order.del_flag) return false
+
+    if (statusFilter.value !== 'all' && order.status !== statusFilter.value) return false
+    return true
+  })
 )
 
 async function fetchOrders() {
@@ -550,6 +594,12 @@ function nextStatus(order: OrderRecord): OrderStatus | null {
   return STATUS_SEQUENCE[idx + 1]
 }
 
+function prevStatus(order: OrderRecord): OrderStatus | null {
+  const idx = STATUS_SEQUENCE.indexOf(order.status)
+  if (idx <= 0) return null
+  return STATUS_SEQUENCE[idx - 1]
+}
+
 async function advanceOrderStatus(order: OrderRecord) {
   const next = nextStatus(order)
   if (!next) return
@@ -565,6 +615,44 @@ async function advanceOrderStatus(order: OrderRecord) {
     updated_at: now,
   }
   updates[timestampField] = now
+
+  const { data, error } = await supabase
+    .from('commandes')
+    .update(updates)
+    .eq('id', order.id)
+    .eq('status', order.status)
+    .select('*')
+    .single<OrderRecord>()
+
+  if (error) {
+    ordersError.value = error.message
+    return
+  }
+
+  ordersError.value = null
+  orders.value = orders.value.map(o => o.id === order.id ? data : o)
+}
+
+async function revertOrderStatus(order: OrderRecord) {
+  const previous = prevStatus(order)
+  if (!previous) return
+
+  const now = new Date().toISOString()
+  const updates: Record<string, any> = {
+    status: previous,
+    updated_at: now,
+  }
+
+  if (previous === 'passée') {
+    updates.status_paid_at = null
+    updates.status_sent_at = null
+    updates.status_delivered_at = null
+  } else if (previous === 'payée') {
+    updates.status_sent_at = null
+    updates.status_delivered_at = null
+  } else if (previous === 'envoyée') {
+    updates.status_delivered_at = null
+  }
 
   const { data, error } = await supabase
     .from('commandes')
@@ -648,4 +736,5 @@ function formatOrderStatus(status: OrderStatus | '') {
   if (!status) return ''
   return statusLabels[status as OrderStatus] ?? status
 }
+
 </script>

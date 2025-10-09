@@ -33,13 +33,13 @@
             <!-- Tabs -->
             <div class="flex gap-2 bg-dark/60 p-1 rounded-xl border border-light/10">
               <button
-                class="flex-1 py-2 rounded-lg text-sm"
-                :class="mode==='signin' ? 'bg-primary text-light font-semibold' : 'text-light/80'"
+                class="btn btn-sm flex-1"
+                :class="mode==='signin' ? 'btn-red' : 'btn-outline text-light/60'"
                 @click="mode='signin'"
               >{{ t('auth.signIn') }}</button>
               <button
-                class="flex-1 py-2 rounded-lg text-sm"
-                :class="mode==='signup' ? 'bg-primary text-light font-semibold' : 'text-light/80'"
+                class="btn btn-sm flex-1"
+                :class="mode==='signup' ? 'btn-red' : 'btn-outline text-light/60'"
                 @click="mode='signup'"
               >{{ t('auth.signUp') }}</button>
             </div>
@@ -78,7 +78,7 @@
               <button
                 type="submit"
                 :disabled="authLoading || (mode==='signup' && (password!==confirm || !firstName || !lastName))"
-                class="w-full py-3 rounded-xl bg-primary text-light font-semibold hover:bg-light hover:text-dark transition disabled:opacity-60 disabled:cursor-not-allowed"
+                class="btn btn-red w-full"
               >
                 <span v-if="mode==='signin'">{{ t('auth.signIn') }}</span>
                 <span v-else>{{ t('auth.createAccount') || t('auth.signUp') }}</span>
@@ -95,7 +95,7 @@
             <button
               @click="google"
               :disabled="authLoading"
-              class="w-full py-3 rounded-xl bg-light text-dark font-semibold hover:bg-secondaryLight transition disabled:opacity-60 disabled:cursor-not-allowed"
+              class="btn btn-white w-full"
             >
               <i class="fa-brands fa-google mr-2"></i>
               {{ t('auth.continueWithGoogle') }}

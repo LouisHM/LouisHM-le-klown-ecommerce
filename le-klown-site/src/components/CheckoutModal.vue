@@ -144,13 +144,13 @@
                 </div>
 
                 <div class="md:col-span-2 flex items-center justify-end gap-3">
-                  <button type="button" class="px-4 py-2 rounded-xl bg-backgroundDark border border-light/10" @click="handleClose">
+                  <button type="button" class="btn btn-black" @click="handleClose">
                     {{ t('common.cancel') }}
                   </button>
                   <button
                     type="submit"
                     :disabled="submitting || !isValid || cartItems.length === 0"
-                    class="px-5 py-2 rounded-xl bg-primary text-light font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                    class="btn btn-red w-full md:w-auto"
                   >
                     {{ submitting ? t('checkout.sending') : t('checkout.confirm') }}
                   </button>
@@ -180,7 +180,7 @@
                 <p class="font-semibold">{{ paymentStrings.title }}</p>
                 <p class="text-light/90">{{ summaryStrings.reminder }}</p>
               </div>
-              <button class="w-full py-3 rounded-xl bg-primary text-light font-semibold" @click="closeAfterSummary">
+              <button class="btn btn-red w-full" @click="closeAfterSummary">
                 {{ summaryStrings.close }}
               </button>
             </div>

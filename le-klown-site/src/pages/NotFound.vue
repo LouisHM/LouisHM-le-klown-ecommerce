@@ -7,7 +7,7 @@
     </p>
     <router-link
       to="/"
-      class="px-6 py-2 rounded-xl bg-primary text-light font-semibold shadow hover:bg-light hover:text-dark transition"
+      class="btn btn-red btn-lg shadow"
     >
       Retour à l’accueil
     </router-link>

@@ -161,9 +161,7 @@
                 <button
                   @click="addToCart"
                   :disabled="product.stock === 0"
-                  class="w-full bg-primary text-light md:text-light py-2.5 md:py-3 rounded-lg font-semibold
-                         hover:bg-light hover:text-dark transition
-                         disabled:opacity-60 disabled:cursor-not-allowed"
+                  class="btn btn-red w-full md:text-base"
                 >
                   {{ $t('cart.addToCart') }}
                 </button>

@@ -51,7 +51,7 @@
   <div class="relative">
     <button
       @click="langMenu = !langMenu"
-      class="flex items-center gap-1 px-3 py-1 rounded-full hover:bg-gray-700 transition focus:outline-none text-sm"
+      class="btn btn-outline btn-sm gap-1"
     >
       <span v-if="$i18n.locale === 'fr'">🇫🇷</span>
       <span v-else>🇬🇧</span>
@@ -63,11 +63,11 @@
     >
       <button
         @click="changeLang('fr')"
-        class="block w-full text-center px-4 py-2 hover:bg-gray-700 transition"
+        class="btn btn-ghost w-full justify-center"
       >🇫🇷</button>
       <button
         @click="changeLang('en')"
-        class="block w-full text-center px-4 py-2 hover:bg-gray-700 transition"
+        class="btn btn-ghost w-full justify-center"
       >🇬🇧</button>
     </div>
   </div>

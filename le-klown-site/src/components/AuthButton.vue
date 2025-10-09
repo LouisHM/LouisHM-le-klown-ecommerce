@@ -4,7 +4,7 @@
     <button
       v-if="!user"
       @click="showAuth = true"
-      class="ml-4 bg-light text-dark px-3 py-1 rounded-full hover:bg-primary hover:text-light transition shadow-lg"
+      class="ml-4 btn btn-white btn-sm shadow-lg"
     >
       {{ $t('auth.login') }}
     </button>
@@ -13,7 +13,7 @@
     <button
       v-else
       @click="showLogout = true"
-      class="ml-4 text-light px-3 py-2 rounded-full hover:bg-light hover:text-dark transition flex items-center gap-2 group"
+      class="ml-4 btn btn-outline btn-sm gap-2 group"
     >
       {{ displayName || user.email }}
       <i class="fa-solid fa-right-from-bracket"></i>
@@ -31,10 +31,10 @@
         <div class="bg-backgroundDark text-light p-6 rounded-2xl shadow-2xl w-full max-w-md mx-4 space-y-6 border border-light/10">
           <p class="text-xl font-heading text-center">{{ $t('auth.logoutTitle') }}</p>
           <div class="flex justify-center gap-3">
-            <button @click="showLogout = false" class="px-4 py-2 rounded bg-light text-dark hover:bg-darkBackground transition">
+            <button @click="showLogout = false" class="btn btn-white btn-sm">
               {{ $t('auth.cancel') }}
             </button>
-            <button @click="handleSignOut" class="px-4 py-2 rounded bg-primary text-light hover:bg-light hover:text-dark transition">
+            <button @click="handleSignOut" class="btn btn-red btn-sm">
               {{ $t('auth.logout') }}
             </button>
           </div>

@@ -4,4 +4,42 @@
 
 html, body {
   @apply bg-dark text-light;
-}   
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center font-semibold rounded-full px-3 py-1.5 border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/60 focus:ring-offset-backgroundDark disabled:opacity-60 disabled:cursor-not-allowed;
+  }
+
+  .btn-sm {
+    @apply px-2.5 py-1 text-sm;
+  }
+
+  .btn-lg {
+    @apply px-4 py-2 text-base;
+  }
+
+  .btn-red {
+    @apply bg-primary text-light border-primary/70 hover:bg-light hover:text-dark;
+  }
+
+  .btn-black {
+    @apply bg-dark text-light border-light/10 hover:bg-light/10;
+  }
+
+  .btn-white {
+    @apply bg-light text-dark border-light hover:bg-dark hover:text-light;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-light border-secondaryLight/60 hover:bg-secondaryLight;
+  }
+
+  .btn-outline {
+    @apply bg-transparent text-light border-light/40 hover:bg-light/10;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-light border-transparent hover:bg-light/10;
+  }
+}

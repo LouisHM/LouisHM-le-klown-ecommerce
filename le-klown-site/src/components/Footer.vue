@@ -15,7 +15,7 @@
       <!-- Contact -->
       <div class="space-y-4 flex flex-col items-center justify-center">
         <button
-          class="bg-primary text-light px-6 py-3 rounded-full font-semibold hover:bg-light hover:text-dark transition-all duration-700"
+          class="btn btn-red btn-lg"
           @click="$emit('contact-click')"
         >
           {{ $t('footer.contactMe') }}

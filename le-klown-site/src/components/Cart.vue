@@ -136,7 +136,7 @@
 
           <div class="flex gap-3">
             <button
-              class="flex-1 bg-light text-dark font-semibold py-2.5 rounded-lg hover:brightness-95 transition"
+              class="btn btn-white flex-1"
               @click="startCheckout"
               :disabled="items.length === 0"
             >
@@ -144,7 +144,7 @@
             </button>
 
             <button
-              class="px-3 py-2 rounded-lg bg-black/40 hover:bg-black/60 text-sm"
+              class="btn btn-black btn-sm"
               @click="clearCart()"
               :disabled="items.length === 0"
             >
