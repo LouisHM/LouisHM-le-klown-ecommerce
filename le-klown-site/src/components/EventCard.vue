@@ -32,6 +32,27 @@
       </p>
     </div>
 
+    <!-- Vignettes supplémentaires -->
+    <div
+      v-if="secondaryImages.length"
+      class="absolute top-3 right-3 z-20 flex -space-x-1"
+      @click.stop
+    >
+      <div
+        v-for="(thumb, index) in secondaryImages"
+        :key="index"
+        class="w-9 h-9 rounded-md overflow-hidden border border-white/40 bg-black/30 backdrop-blur-sm"
+      >
+        <img :src="thumb" alt="Miniature" class="w-full h-full object-cover" />
+      </div>
+      <div
+        v-if="extraImagesCount > 0"
+        class="w-9 h-9 rounded-md border border-white/40 bg-black/60 text-white text-xs flex items-center justify-center"
+      >
+        +{{ extraImagesCount }}
+      </div>
+    </div>
+
     <!-- Admin boutons -->
     <div
       v-if="editable"
@@ -65,6 +86,18 @@ function formatDate(dateStr?: string) {
 const primaryImage = computed(() => {
   if (Array.isArray(event.images) && event.images.length) return event.images[0]
   return event.image_url ?? null
+})
+
+const secondaryImages = computed(() => {
+  if (Array.isArray(event.images) && event.images.length > 1) {
+    return event.images.slice(1, 3)
+  }
+  return []
+})
+
+const extraImagesCount = computed(() => {
+  if (!Array.isArray(event.images)) return 0
+  return Math.max(event.images.length - 3, 0)
 })
 </script>
 
