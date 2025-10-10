@@ -116,54 +116,85 @@
               </p>
 
               <!-- Controls: Size + Quantity on the same row -->
-              <div class="mt-4 space-y-3">
-                <div class="flex gap-3 items-end">
-                  <!-- Size -->
-                  <div v-if="product.has_sizes" class="flex-1">
-                    <label class="font-semibold mb-1 block text-xs md:text-sm">{{ $t('cart.chooseSize') }}</label>
+              <div class="mt-4 space-y-4">
+                <div
+                  v-for="option in product.options"
+                  :key="option.id"
+                  class="space-y-2"
+                >
+                  <label class="font-semibold block text-xs md:text-sm">
+                    {{ option.label }}
+                    <span v-if="option.required" class="text-red-400">*</span>
+                  </label>
+
+                  <div v-if="!option.multi">
                     <select
-                      v-model="selectedSize"
-                      ref="sizeSelectEl"
-                      class="w-full h-[42px] md:h-[44px] px-3 rounded-lg border bg-dark text-light
-                             focus:outline-none"
-                      :class="sizeError ? 'border-error ring-1 ring-error' : 'border-gray-600 focus:border-gray-400'"
-                      :aria-invalid="sizeError ? 'true' : 'false'"
-                      :aria-describedby="sizeError ? sizeErrorId : undefined"
+                      class="w-full h-[42px] md:h-[44px] px-3 rounded-lg border bg-dark text-light focus:outline-none"
+                      :class="selectionErrors[option.id] ? 'border-error ring-1 ring-error' : 'border-gray-600 focus:border-gray-400'"
+                      :value="(selectedOptions[option.id] ?? [])[0] ?? ''"
+                      @change="onSelectChange(option.id, $event)"
                     >
-                      <option disabled value="">{{ $t('cart.chooseSize') }}</option>
-                      <option v-for="sz in product.sizes" :key="sz" :value="sz">{{ sz }}</option>
+                      <option value="">
+                        {{ $t('cart.chooseSize') || `Choisis ${option.label.toLowerCase()}` }}
+                      </option>
+                      <option
+                        v-for="value in option.values"
+                        :key="value.id"
+                        :value="value.id"
+                      >
+                        {{ value.label }}
+                      </option>
                     </select>
-                    <p
-                      v-if="sizeError"
-                      :id="sizeErrorId"
-                      class="mt-1 text-sm text-error"
-                      role="alert"
+                  </div>
+                  <div v-else class="flex flex-wrap gap-2">
+                    <label
+                      v-for="value in option.values"
+                      :key="value.id"
+                      class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-600 cursor-pointer bg-dark/40 hover:border-gray-400"
                     >
-                      {{ $t('cart.mustChooseSize') }}
-                    </p>
+                      <input
+                        type="checkbox"
+                        class="accent-primary rounded"
+                        :checked="isValueSelected(option.id, value.id)"
+                        @change="onToggleChange(option.id, value.id, $event)"
+                      />
+                      <span class="text-sm">{{ value.label }}</span>
+                    </label>
                   </div>
 
-                  <!-- Quantity -->
-                  <div :class="product.has_sizes ? 'w-28' : 'flex-1'">
+                  <p
+                    v-if="selectionErrors[option.id]"
+                    class="text-sm text-error"
+                    role="alert"
+                  >
+                    {{ selectionErrors[option.id] }}
+                  </p>
+                </div>
+
+                <div class="flex gap-3 items-end">
+                  <div class="flex-1">
                     <label class="font-semibold mb-1 block text-xs md:text-sm">{{ $t('cart.quantity') }}</label>
                     <input
                       type="number"
                       v-model.number="quantity"
                       min="1"
-                      :max="product.stock"
+                      :max="Math.max(currentStock, 1)"
                       class="w-full h-[42px] md:h-[44px] px-3 rounded-lg border bg-dark text-light border-gray-600
                              focus:outline-none focus:border-gray-400"
                     />
                   </div>
                 </div>
 
-                <!-- CTA -->
+                <p v-if="selectionErrors._variant" class="text-sm text-error" role="alert">
+                  {{ selectionErrors._variant }}
+                </p>
+
                 <button
                   @click="addToCart"
-                  :disabled="product.stock === 0"
-                  class="btn btn-red w-full md:text-base"
+                  :disabled="currentStock === 0 || (product.options.length > 0 && !selectionComplete)"
+                  class="btn btn-red w-full md:text-base disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {{ $t('cart.addToCart') }}
+                  {{ currentStock === 0 ? ($t('shop.stock.outOfStock') || 'Rupture de stock') : ($t('cart.addToCart') || 'Ajouter au panier') }}
                 </button>
               </div>
             </div>
@@ -175,33 +206,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useCart } from '@/composables/useCart'
-
-interface Product {
-  id: string
-  name: string
-  description: string
-  price: number
-  sizes: string[]
-  stock: number
-  has_sizes: boolean
-  images: string[]
-}
+import type { Product, ProductVariant } from '@/composables/useProducts'
 
 const props = defineProps<{ visible: boolean; product: Product }>()
 const emit = defineEmits(['close'])
 const { addItem } = useCart()
 
-const selectedSize = ref<string>('')
 const quantity = ref<number>(1)
-const sizeError = ref(false)
-const sizeSelectEl = ref<HTMLSelectElement | null>(null)
-
-const sizeErrorId = `size-error-${props.product?.id ?? 'p'}`
-
-// Images
+const selectedOptions = reactive<Record<string, string[]>>({})
+const selectionErrors = reactive<Record<string, string>>({})
 const index = ref(0)
+
 const images = computed(() =>
   props.product?.images?.length ? props.product.images : ['/assets/img/default-product.jpg']
 )
@@ -212,78 +229,196 @@ function select(i: number) { index.value = i }
 function prev() { index.value = (index.value - 1 + images.value.length) % images.value.length }
 function next() { index.value = (index.value + 1) % images.value.length }
 
-// Stock pill
+const selectedValueIds = computed<string[]>(() =>
+  Object.values(selectedOptions).flat().map(String)
+)
+
+const selectionComplete = computed(() => {
+  if (!props.product || props.product.options.length === 0) return true
+  return props.product.options.every(option => {
+    if (!option.required) return true
+    const values = selectedOptions[option.id] ?? []
+    return Array.isArray(values) && values.length > 0
+  })
+})
+
+const activeVariant = computed<ProductVariant | null>(() => {
+  if (!Array.isArray(props.product?.variants)) return null
+  if (props.product.options.length === 0) {
+    return props.product.variants[0] ?? null
+  }
+  if (!selectionComplete.value) return null
+
+  const target = [...selectedValueIds.value].sort()
+
+  return props.product.variants.find(variant => {
+    const values = Array.isArray(variant.optionValueIds)
+      ? variant.optionValueIds.map(String).sort()
+      : []
+    if (values.length !== target.length) return false
+    return values.every((valueId, idx) => valueId === target[idx])
+  }) ?? null
+})
+
+const currentStock = computed(() => activeVariant.value?.stock ?? props.product.totalStock)
+
 const stockStatus = computed<'inStock' | 'lowStock' | 'outOfStock'>(() => {
-  if (props.product.stock === 0) return 'outOfStock'
-  if (props.product.stock < 10) return 'lowStock'
+  const stock = currentStock.value
+  if (stock <= 0) return 'outOfStock'
+  if (stock < 10) return 'lowStock'
   return 'inStock'
 })
+
 const stockClass = computed(() => {
   switch (stockStatus.value) {
-    case 'inStock':   return 'bg-success text-dark'
-    case 'lowStock':  return 'bg-warning text-dark'
-    case 'outOfStock':return 'bg-error text-light'
+    case 'inStock': return 'bg-success text-dark'
+    case 'lowStock': return 'bg-warning text-dark'
+    case 'outOfStock': return 'bg-error text-light'
   }
 })
+
+function clearSelections() {
+  for (const key of Object.keys(selectedOptions)) delete selectedOptions[key]
+  for (const key of Object.keys(selectionErrors)) delete selectionErrors[key]
+}
+
+function ensureDefaultSelections() {
+  for (const option of props.product.options) {
+    if (option.values.length === 1) {
+      selectedOptions[option.id] = [option.values[0].id]
+    }
+  }
+}
+
+function resetState() {
+  clearSelections()
+  ensureDefaultSelections()
+  quantity.value = 1
+  index.value = 0
+}
+
+function selectSingle(optionId: string, valueId: string) {
+  if (valueId) selectedOptions[optionId] = [valueId]
+  else delete selectedOptions[optionId]
+  if (selectedOptions[optionId]?.length) delete selectionErrors[optionId]
+}
+
+function toggleValue(optionId: string, valueId: string, checked: boolean) {
+  const current = selectedOptions[optionId] ?? []
+  const next = checked
+    ? Array.from(new Set([...current, valueId]))
+    : current.filter(id => id !== valueId)
+
+  if (next.length > 0) selectedOptions[optionId] = next
+  else delete selectedOptions[optionId]
+
+  if ((selectedOptions[optionId] ?? []).length > 0) delete selectionErrors[optionId]
+}
+
+function isValueSelected(optionId: string, valueId: string) {
+  return (selectedOptions[optionId] ?? []).includes(valueId)
+}
+
+function onSelectChange(optionId: string, event: Event) {
+  const target = event.target as HTMLSelectElement
+  selectSingle(optionId, target.value)
+}
+
+function onToggleChange(optionId: string, valueId: string, event: Event) {
+  const target = event.target as HTMLInputElement
+  toggleValue(optionId, valueId, target.checked)
+}
+
+function buildSelectedOptionSummary() {
+  const summary: { optionId: string; optionLabel: string; valueLabel: string }[] = []
+  for (const option of props.product.options) {
+    const values = selectedOptions[option.id] ?? []
+    for (const valueId of values) {
+      const value = option.values.find(v => v.id === valueId)
+      if (value) {
+        summary.push({
+          optionId: option.id,
+          optionLabel: option.label,
+          valueLabel: value.label,
+        })
+      }
+    }
+  }
+  return summary
+}
+
+function validateSelections(): boolean {
+  let valid = true
+  for (const option of props.product.options) {
+    const values = selectedOptions[option.id] ?? []
+    if (option.required && values.length === 0) {
+      selectionErrors[option.id] = option.multi
+        ? 'Choisis au moins une valeur.'
+        : 'Choisis une option.'
+      valid = false
+    } else {
+      delete selectionErrors[option.id]
+    }
+  }
+  return valid
+}
 
 function close() { emit('close') }
 
-// Reset à l’ouverture
-watch(() => props.visible, (v) => {
-  if (v) {
-    selectedSize.value = ''
-    quantity.value = 1
-    sizeError.value = false
-    index.value = 0
-  }
-})
-
-watch(selectedSize, (val) => {
-  if (val) sizeError.value = false
-})
-
 function addToCart() {
-  // Taille requise si nécessaire
-  if (props.product.has_sizes && !selectedSize.value) {
-    sizeError.value = true
-    sizeSelectEl.value?.focus()
+  if (!validateSelections()) return
+
+  const variant = activeVariant.value ?? props.product.variants[0] ?? null
+  if (!variant) {
+    selectionErrors['_variant'] = 'Cette configuration est indisponible.'
     return
   }
+  if (variant.stock <= 0) {
+    selectionErrors['_variant'] = 'Cette configuration est en rupture.'
+    return
+  }
+  delete selectionErrors['_variant']
 
-  // Clamp quantité (évite NaN/0/négatif)
-  const max = Number.isFinite(props.product.stock) ? Math.max(props.product.stock, 0) : 9999
+  const max = Math.max(1, variant.stock)
   const q = Math.max(1, Math.min(Number(quantity.value) || 1, max))
   quantity.value = q
 
-  // ✅ Payload identique à ta version qui fonctionnait
+  const selectedOptionSummary = buildSelectedOptionSummary()
+
   addItem({
     productId: props.product.id,
+    variantId: variant.id,
     name: props.product.name,
     price: props.product.price,
-    size: selectedSize.value || undefined,
     quantity: q,
     image: props.product.images?.[0] || undefined,
+    selectedOptions: selectedOptionSummary,
   })
-  console.log('Added to cart:', {
-    productId: props.product.id,
-    name: props.product.name,
-    price: props.product.price,
-    size: selectedSize.value || undefined,
-    quantity: q,
-    image: props.product.images?.[0] || undefined,
-  })
+
   close()
 }
 
-watch(() => props.visible, (v) => {
+watch(() => props.product, () => {
+  resetState()
+}, { immediate: true })
+
+watch(currentStock, (stock) => {
+  if (stock > 0 && quantity.value > stock) {
+    quantity.value = stock
+  }
+  if (stock <= 0) {
+    quantity.value = 1
+  }
+})
+
+watch(() => props.visible, (visible) => {
   const html = document.documentElement
-  if (v) {
-    // lock
+  if (visible) {
+    resetState()
     const scrollBarComp = window.innerWidth - html.clientWidth
     html.style.overflow = 'hidden'
     if (scrollBarComp > 0) html.style.paddingRight = scrollBarComp + 'px'
   } else {
-    // unlock
     html.style.overflow = ''
     html.style.paddingRight = ''
   }

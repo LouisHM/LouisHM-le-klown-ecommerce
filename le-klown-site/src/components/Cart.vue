@@ -86,12 +86,13 @@
               </div>
 
               <!-- Badges -->
-              <div class="mt-1 flex items-center gap-2">
+              <div class="mt-1 flex flex-wrap items-center gap-2">
                 <span
-                  v-if="it.size"
+                  v-for="opt in it.selectedOptions || []"
+                  :key="`${opt.optionId}-${opt.valueLabel}`"
                   class="inline-block px-2 py-0.5 text-[11px] rounded border border-white/20 bg-black/20"
                 >
-                  {{ it.size }}
+                  {{ opt.optionLabel }}: {{ opt.valueLabel }}
                 </span>
                 <span
                   v-if="it.stockStatus"
@@ -160,7 +161,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useCart } from '@/composables/useCart'
+import { useCart, type CartItem } from '@/composables/useCart'
 
 const { t } = useI18n()
 
@@ -176,16 +177,6 @@ function closeCart() { emit('update:open', false) }
 
 /* Store panier */
 const cart = useCart()
-
-type CartItem = {
-  productId: string
-  name: string
-  price: number
-  quantity: number
-  size?: string
-  image?: string
-  stockStatus?: 'inStock' | 'lowStock' | 'outOfStock'
-}
 
 /* Sélecteurs */
 const items = computed<CartItem[]>(() => {
@@ -212,12 +203,12 @@ function lineTotal(it: CartItem) {
 }
 function setQty(it: CartItem, q: number) {
   const newQ = Math.max(1, Math.min(Number(q) || 1, 999))
-  cart.updateQuantity(it.productId, it.size, newQ)
+  cart.updateQuantity(it.variantId, newQ)
 }
 function inc(it: CartItem) { setQty(it, (Number(it.quantity) || 1) + 1) }
 function dec(it: CartItem) { setQty(it, (Number(it.quantity) || 1) - 1) }
 function remove(it: CartItem) {
-  cart.removeItem(it.productId, it.size)
+  cart.removeItem(it.variantId)
 }
 function clearCart() {
   cart.clearCart()

@@ -37,12 +37,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { supabase } from '@/supabase/client'
 import EventCard from '@/components/EventCard.vue'
 import EventModal from '@/components/EventModal.vue'
+import { normalizeEventRow, type EventRecord } from '@/composables/useEvents'
+import { supabase } from '@/supabase/client'
 
-const events = ref<any[]>([])
-const selectedEvent = ref(null)
+const events = ref<EventRecord[]>([])
+const selectedEvent = ref<EventRecord | null>(null)
 
 async function fetchEvents() {
   const { data, error } = await supabase
@@ -50,21 +51,25 @@ async function fetchEvents() {
     .select('*')
     .order('date', { ascending: true })
 
-  if (!error) events.value = data
-  else console.error(error)
+  if (error) {
+    console.error(error)
+    events.value = []
+  } else {
+    events.value = (data ?? []).map(normalizeEventRow)
+  }
 }
 
 const now = new Date()
 
 const upcomingEvents = computed(() =>
-  events.value.filter(e => new Date(e.date) >= now)
+  events.value.filter(e => new Date(e.date).getTime() >= now.getTime())
 )
 
 const pastEvents = computed(() =>
-  events.value.filter(e => new Date(e.date) < now).reverse()
+  events.value.filter(e => new Date(e.date).getTime() < now.getTime()).reverse()
 )
 
-function openModal(event: any) {
+function openModal(event: EventRecord) {
   selectedEvent.value = event
 }
 

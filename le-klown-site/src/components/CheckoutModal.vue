@@ -35,7 +35,9 @@
                   <li v-for="(it, i) in cartItems" :key="i" class="flex justify-between gap-2">
                     <span class="truncate">
                       {{ it.name }}
-                      <template v-if="it.size"> — {{ it.size }}</template>
+                      <template v-if="it.selectedOptions?.length">
+                        — {{ formatCartItemOptions(it.selectedOptions) }}
+                      </template>
                       × {{ it.quantity }}
                     </span>
                     <span class="whitespace-nowrap">{{ formatPrice(lineTotal(it)) }} €</span>
@@ -196,19 +198,14 @@ import { computed, reactive, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toUnitPriceEUR } from '@/utils/price'
 import { user as authUser, firstName as authFirstName, lastName as authLastName } from '@/composables/useAuth'
-import { useCart } from '@/composables/useCart'
+import { useCart, type CartItem as CartLineItem, type CartOption } from '@/composables/useCart'
 import { supabase } from '@/supabase/client'
 
 const { t, locale } = useI18n()
 
 const props = defineProps<{
   visible: boolean
-  cartItems: Array<{
-    price: number | string
-    quantity: number
-    name: string
-    size?: string
-  }>
+  cartItems: CartLineItem[]
 }>()
 
 const emit = defineEmits<{
@@ -303,6 +300,21 @@ function lineTotal(it: { price: any; quantity: number }) {
   return priceNum(it.price) * Math.max(1, Number(it.quantity) || 1)
 }
 function formatPrice(n: number) { return n.toFixed(2) }
+function formatCartItemOptions(options?: CartOption[]) {
+  if (!options || options.length === 0) return ''
+  return options.map(opt => opt.valueLabel).join(', ')
+}
+
+function extractOrderRecord(payload: any): any {
+  if (!payload) return null
+  if (Array.isArray(payload)) return payload[0] ?? null
+  if (typeof payload === 'object') {
+    if ('order' in payload && payload.order) return (payload as any).order
+    if ('data' in payload && payload.data) return (payload as any).data
+    return payload
+  }
+  return null
+}
 
 const subtotal = computed(() => props.cartItems.reduce((s, it) => s + lineTotal(it), 0))
 const shipping = computed(() => (subtotal.value >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE))
@@ -385,18 +397,21 @@ async function submit() {
     const qty = Math.max(1, Number(it.quantity) || 1)
     const price = priceNum(it.price)
     const line = (qty * price).toFixed(2)
-    const label = `${esc(it.name)}${it.size ? ' (' + esc(it.size) + ')' : ''} × ${qty}`
+    const optionText = formatCartItemOptions(it.selectedOptions)
+    const suffix = optionText ? ` (${esc(optionText)})` : ''
+    const label = `${esc(it.name)}${suffix} × ${qty}`
     return `<tr><td style="padding:6px 0; color:#111;">${label}</td><td style="padding:6px 0;" align="right">${line} €</td></tr>`
   }).join('')
   const items_html = `<table cellspacing="0" cellpadding="0" width="100%" style="border-collapse:collapse; font-size:14px;">${rows}</table>`
-  const orderRef = buildOrderRef()
+  let orderRef = buildOrderRef()
 
   const itemsSnapshot = props.cartItems.map(it => ({
-    productId: (it as any).productId ?? null,
+    product_id: (it as any).productId ?? null,
+    variant_id: (it as any).variantId ?? null,
     name: it.name,
     price: Number(it.price) || 0,
     quantity: Number(it.quantity) || 1,
-    size: it.size ?? null,
+    options: it.selectedOptions ?? [],
     image: (it as any).image ?? null,
   }))
 
@@ -440,18 +455,25 @@ async function submit() {
 
   submitting.value = true
   try {
-    const { error: insertError } = await supabase
-      .from('commandes')
-      .insert(insertPayload)
-      .single()
+    const { data, error: rpcError } = await supabase.rpc('create_order_with_stock', { payload: insertPayload })
+    if (rpcError) throw new Error(rpcError.message || 'Création de commande impossible.')
 
-    if (insertError) throw new Error(insertError.message)
+    const createdOrder = extractOrderRecord(data)
+    if (!createdOrder) throw new Error('Aucune commande retournée par le serveur.')
+
+    orderRef = createdOrder.order_ref || orderRef
+    template_params.order_ref = orderRef
 
     summaryData.orderRef = orderRef
-    summaryData.items = itemsSnapshot.map(item => ({
-      label: `${item.name}${item.size ? ` (${item.size})` : ''} × ${item.quantity}`,
-      total: (item.price || 0) * item.quantity,
-    }))
+    summaryData.items = itemsSnapshot.map(item => {
+      const optionText = Array.isArray(item.options) && item.options.length
+        ? ` (${formatCartItemOptions(item.options as CartOption[])})`
+        : ''
+      return {
+        label: `${item.name}${optionText} × ${item.quantity}`,
+        total: (item.price || 0) * item.quantity,
+      }
+    })
     summaryData.total = total.value
     cartStore.clearCart()
     showingSummary.value = true

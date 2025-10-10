@@ -9,10 +9,47 @@ export interface EventRecord {
   lieu: string
   prix_debut: number
   image_url: string | null
+  images: string[]
   billeterie_url: string | null
   insta_url: string | null
   description: string | null
   created_at?: string
+}
+
+function parseEventImages(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.map((value) => String(value).trim()).filter(Boolean)
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim()
+    if (!trimmed) return []
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (Array.isArray(parsed)) {
+        return parsed.map((value) => String(value).trim()).filter(Boolean)
+      }
+    } catch {
+      /* ignore */
+    }
+    return [trimmed]
+  }
+  if (raw) return [String(raw).trim()].filter(Boolean)
+  return []
+}
+
+export function normalizeEventRow(row: any): EventRecord {
+  const images = parseEventImages(row?.image_url)
+  return {
+    id: String(row.id),
+    nom: row.nom ?? '',
+    date: row.date ?? '',
+    lieu: row.lieu ?? '',
+    prix_debut: Number(row.prix_debut ?? 0),
+    image_url: images[0] ?? null,
+    images,
+    billeterie_url: row.billeterie_url ?? null,
+    insta_url: row.insta_url ?? null,
+    description: row.description ?? null,
+    created_at: row.created_at ?? undefined,
+  }
 }
 
 export function useEvents() {
@@ -34,7 +71,7 @@ export function useEvents() {
       error.value = err.message
       events.value = []
     } else {
-      events.value = (data ?? []) as unknown as EventRecord[]
+      events.value = (data ?? []).map(normalizeEventRow)
     }
 
     loading.value = false
@@ -49,22 +86,22 @@ export function useEvents() {
       .eq('id', id)
       .single()
 
-    return { data: (data ?? null) as unknown as EventRecord | null, error: err }
+    return { data: data ? normalizeEventRow(data) : null, error: err }
   }
 
   /** Add a new event */
-  async function addEvent(input: Omit<EventRecord, 'id' | 'created_at'>) {
+  async function addEvent(input: Omit<EventRecord, 'id' | 'created_at' | 'images'>) {
     const { data, error: err } = await supabase
       .from('evenements')
       .insert([input])
       .select('*')
       .single()
 
-    return { data: (data ?? null) as unknown as EventRecord | null, error: err }
+    return { data: data ? normalizeEventRow(data) : null, error: err }
   }
 
   /** Update an existing event */
-  async function updateEvent(id: string, updates: Partial<Omit<EventRecord, 'id'>>) {
+  async function updateEvent(id: string, updates: Partial<Omit<EventRecord, 'id' | 'images'>>) {
     const { data, error: err } = await supabase
       .from('evenements')
       .update(updates)
@@ -72,7 +109,7 @@ export function useEvents() {
       .select('*')
       .single()
 
-    return { data: (data ?? null) as unknown as EventRecord | null, error: err }
+    return { data: data ? normalizeEventRow(data) : null, error: err }
   }
 
   /** Delete an event */

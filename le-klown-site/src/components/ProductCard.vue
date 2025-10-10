@@ -51,18 +51,18 @@
          transition-all duration-500 ease-out will-change-transform"
 >
 
-        <!-- Titre + tailles -->
+        <!-- Titre + options -->
         <div class="flex justify-between items-start">
           <h3 class="text-base font-heading font-semibold truncate drop-shadow">
             {{ product.name }}
           </h3>
-          <div v-if="product.has_sizes" class="flex flex-wrap gap-1 justify-end">
+          <div v-if="primaryOption" class="flex flex-wrap gap-1 justify-end">
             <span
-              v-for="sz in product.sizes"
-              :key="sz"
+              v-for="val in primaryOption.values"
+              :key="val.id"
               class="px-2 py-0.5 border border-white/30 rounded text-[11px] bg-black/20"
             >
-              {{ sz }}
+              {{ val.label }}
             </span>
           </div>
         </div>
@@ -92,17 +92,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import ProductModal from '@/components/ProductModal.vue'
-
-interface Product {
-  id: string
-  name: string
-  description: string
-  price: number
-  sizes: string[]
-  stock: number
-  images: string[]
-  has_sizes: boolean
-}
+import type { Product, ProductOptionGroup } from '@/composables/useProducts'
 
 const props = defineProps<{ product: Product }>()
 const showModal = ref(false)
@@ -119,9 +109,14 @@ function next() {
   index.value = (index.value + 1) % images.value.length
 }
 
+const primaryOption = computed<ProductOptionGroup | null>(() => {
+  return props.product.options.length > 0 ? props.product.options[0] : null
+})
+
 const stockStatus = computed<'inStock' | 'lowStock' | 'outOfStock'>(() => {
-  if (props.product.stock === 0) return 'outOfStock'
-  if (props.product.stock < 10) return 'lowStock'
+  const stock = props.product.totalStock
+  if (stock <= 0) return 'outOfStock'
+  if (stock < 10) return 'lowStock'
   return 'inStock'
 })
 

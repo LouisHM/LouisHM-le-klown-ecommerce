@@ -5,8 +5,8 @@
   >
     <!-- Image de fond -->
     <img
-      v-if="event.image_url"
-      :src="event.image_url ?? undefined"
+      v-if="primaryImage"
+      :src="primaryImage"
       alt="Visuel de l'événement"
       class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 z-0"
     />
@@ -45,23 +45,14 @@
 </template>
 
 <script setup lang="ts">
-type DBEvent = {
-  id: number | string
-  nom: string
-  lieu?: string
-  date?: string
-  description?: string | null
-  image_url?: string | null
-  prix_debut?: number | null
-  billeterie_url?: string | null
-  insta_url?: string | null
-}
+import { computed } from 'vue'
+import type { EventRecord } from '@/composables/useEvents'
 
-const { event, editable = false } = defineProps<{ event: DBEvent; editable?: boolean }>()
+const { event, editable = false } = defineProps<{ event: EventRecord; editable?: boolean }>()
 
 const emit = defineEmits<{
   (e: 'click'): void
-  (e: 'edit', event: DBEvent): void
+  (e: 'edit', event: EventRecord): void
   (e: 'delete', id: number | string): void
 }>()
 
@@ -70,6 +61,11 @@ function formatDate(dateStr?: string) {
   const d = new Date(dateStr)
   return Number.isNaN(d.getTime()) ? dateStr : d.toLocaleDateString()
 }
+
+const primaryImage = computed(() => {
+  if (Array.isArray(event.images) && event.images.length) return event.images[0]
+  return event.image_url ?? null
+})
 </script>
 
 <style scoped>

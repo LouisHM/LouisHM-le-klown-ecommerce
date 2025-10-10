@@ -3,24 +3,32 @@ import { reactive, computed } from 'vue'
 
 export interface CartItem {
   productId: string
+  variantId: string
   name: string
   price: number
-  size?: string
   quantity: number
   image?: string
+  selectedOptions?: CartOption[]
+  stockStatus?: 'inStock' | 'lowStock' | 'outOfStock'
+}
+
+export interface CartOption {
+  optionId: string
+  optionLabel: string
+  valueLabel: string
 }
 
 const state = reactive<{ items: CartItem[] }>({ items: [] })
 
-function findIndex(productId: string, size?: string) {
-  return state.items.findIndex(i => i.productId === productId && i.size === size)
+function findIndex(variantId: string) {
+  return state.items.findIndex(i => i.variantId === variantId)
 }
 
 export function useCart() {
   const items = computed(() => state.items)
 
   function addItem(item: CartItem) {
-    const idx = findIndex(item.productId, item.size)
+    const idx = findIndex(item.variantId)
     if (idx >= 0) {
       state.items[idx].quantity += item.quantity
     } else {
@@ -28,13 +36,13 @@ export function useCart() {
     }
   }
 
-  function removeItem(productId: string, size?: string) {
-    const idx = findIndex(productId, size)
+  function removeItem(variantId: string) {
+    const idx = findIndex(variantId)
     if (idx >= 0) state.items.splice(idx, 1)
   }
 
-  function updateQuantity(productId: string, size: string | undefined, quantity: number) {
-    const idx = findIndex(productId, size)
+  function updateQuantity(variantId: string, quantity: number) {
+    const idx = findIndex(variantId)
     if (idx >= 0) state.items[idx].quantity = quantity
   }
 

@@ -130,9 +130,18 @@
                 <p class="line-clamp-2">{{ p.description }}</p>
                 <div class="mt-1 text-light">
                   <span class="font-bold">{{ (Number(p.price) || 0).toFixed(2) }} €</span>
-                  <span v-if="p.has_sizes" class="ml-2 text-light/70">
-                    {{ $t('admin.sizes') }}: {{ (p.sizes || []).join(', ') }}
+                  <span class="ml-2 text-light/70">
+                    {{ $t('admin.totalStock') || 'Stock total' }}: {{ p.totalStock }}
                   </span>
+                </div>
+                <div v-if="p.options.length" class="text-xs text-light/60 space-y-1 mt-2">
+                  <div
+                    v-for="option in p.options"
+                    :key="option.id"
+                  >
+                    <span class="font-semibold">{{ option.label || option.code }}:</span>
+                    {{ option.values.map(val => val.label || val.code).join(', ') }}
+                  </div>
                 </div>
               </div>
 
@@ -275,7 +284,7 @@
               <li v-for="item in parseOrderItems(order)" :key="item.key" class="flex justify-between gap-2">
                 <span class="truncate">
                   {{ item.name }}
-                  <template v-if="item.size">— {{ item.size }}</template>
+                  <template v-if="item.optionsText">— {{ item.optionsText }}</template>
                   × {{ item.quantity }}
                 </span>
                 <span>{{ formatPrice(item.total) }} €</span>
@@ -339,6 +348,7 @@ import AdminEventForm from '@/components/AdminEventForm.vue'
 import AdminProductForm from '@/components/AdminProductForm.vue'
 import EventModal from '@/components/EventModal.vue'
 import { useProducts, type Product } from '@/composables/useProducts'
+import { normalizeEventRow, type EventRecord } from '@/composables/useEvents'
 import { role, authReady, refreshSession } from '@/composables/useAuth'
 
 const { t, locale } = useI18n()
@@ -347,10 +357,10 @@ type AdminTab = 'events' | 'products' | 'orders'
 
 // State
 const mode = ref<AdminTab>('events')
-const events = ref<any[]>([])
-const formEvent = ref<any|null>(null)
-const modalEvent = ref<any|null>(null)
-const selectedProduct = ref<Product|null>(null)
+const events = ref<EventRecord[]>([])
+const formEvent = ref<Record<string, any> | null>(null)
+const modalEvent = ref<EventRecord | null>(null)
+const selectedProduct = ref<Product | null>(null)
 const showConfirm = ref(false)
 const deleteError = ref<string | null>(null)
 const eventFormContainer = ref<HTMLElement | null>(null)
@@ -395,7 +405,7 @@ async function fetchEvents() {
     console.error('[Admin] fetchEvents error:', error)
     return
   }
-  events.value = data || []
+  events.value = (data ?? []).map(normalizeEventRow)
 }
 
 function scrollToForm(section: 'events' | 'products') {
@@ -406,9 +416,9 @@ function scrollToForm(section: 'events' | 'products') {
   })
 }
 
-function editEvent(e: any) {
+function editEvent(e: EventRecord) {
   mode.value = 'events'
-  formEvent.value = { ...e }
+  formEvent.value = { ...e, images: e.images }
   scrollToForm('events')
 }
 
@@ -423,7 +433,7 @@ const { products, fetchProducts, deleteProduct } = useProducts()
 
 function editProduct(p: Product) {
   mode.value = 'products'
-  selectedProduct.value = { ...p }
+  selectedProduct.value = JSON.parse(JSON.stringify(p)) as Product
   scrollToForm('products')
 }
 
@@ -504,7 +514,7 @@ watch(mode, async (value) => {
 const now = Date.now()
 const upcomingEvents = computed(() => events.value.filter(e => new Date(e.date).getTime() >= now))
 const pastEvents = computed(() => events.value.filter(e => new Date(e.date).getTime() < now).reverse())
-function openModal(event: any) { modalEvent.value = event }
+function openModal(event: EventRecord) { modalEvent.value = event }
 
 // Helpers
 function firstImage(p: any): string | null {
@@ -517,10 +527,17 @@ type OrderStatus = 'passée' | 'payée' | 'envoyée' | 'livrée'
 
 type OrderItemSnapshot = {
   productId?: string | null
+  variant_id?: string | null
   name: string
   price: number
   quantity: number
   size?: string | null
+  options?: Array<{
+    optionId?: string | null
+    optionLabel?: string | null
+    valueId?: string | null
+    valueLabel?: string | null
+  } | Record<string, any>>
   image?: string | null
 }
 
@@ -600,92 +617,79 @@ function prevStatus(order: OrderRecord): OrderStatus | null {
   return STATUS_SEQUENCE[idx - 1]
 }
 
+function coerceOrderRecord(payload: any): OrderRecord | null {
+  if (!payload) return null
+  if (Array.isArray(payload)) return (payload[0] ?? null) as OrderRecord | null
+  if (typeof payload === 'object') {
+    if ('order' in payload && payload.order) return payload.order as OrderRecord
+    if ('data' in payload && payload.data) return payload.data as OrderRecord
+    return payload as OrderRecord
+  }
+  return null
+}
+
+async function callOrderRpc(functionName: string, params: Record<string, any>): Promise<OrderRecord> {
+  const { data, error } = await supabase.rpc(functionName, params)
+  if (error) throw error
+  const order = coerceOrderRecord(data)
+  if (!order) throw new Error('Aucune commande retournée par le serveur.')
+  return order
+}
+
+function applyOrderUpdate(order: OrderRecord) {
+  orders.value = orders.value.map(o => o.id === order.id ? order : o)
+}
+
+function handleOrderError(err: any) {
+  console.error('[Admin] order RPC error', err)
+  ordersError.value = err?.message || err?.error_description || 'Action impossible.'
+}
+
 async function advanceOrderStatus(order: OrderRecord) {
   const next = nextStatus(order)
   if (!next) return
 
-  const now = new Date().toISOString()
-  const timestampField = next === 'payée' ? 'status_paid_at'
-    : next === 'envoyée' ? 'status_sent_at'
-    : next === 'livrée' ? 'status_delivered_at'
-    : 'status_passed_at'
-
-  const updates: Record<string, any> = {
-    status: next,
-    updated_at: now,
+  try {
+    const updated = await callOrderRpc('advance_order_status', {
+      order_id: order.id,
+      current_status: order.status,
+      next_status: next,
+    })
+    ordersError.value = null
+    applyOrderUpdate(updated)
+  } catch (err: any) {
+    handleOrderError(err)
   }
-  updates[timestampField] = now
-
-  const { data, error } = await supabase
-    .from('commandes')
-    .update(updates)
-    .eq('id', order.id)
-    .eq('status', order.status)
-    .select('*')
-    .single<OrderRecord>()
-
-  if (error) {
-    ordersError.value = error.message
-    return
-  }
-
-  ordersError.value = null
-  orders.value = orders.value.map(o => o.id === order.id ? data : o)
 }
 
 async function revertOrderStatus(order: OrderRecord) {
   const previous = prevStatus(order)
   if (!previous) return
 
-  const now = new Date().toISOString()
-  const updates: Record<string, any> = {
-    status: previous,
-    updated_at: now,
+  try {
+    const updated = await callOrderRpc('revert_order_status', {
+      order_id: order.id,
+      current_status: order.status,
+      previous_status: previous,
+    })
+    ordersError.value = null
+    applyOrderUpdate(updated)
+  } catch (err: any) {
+    handleOrderError(err)
   }
-
-  if (previous === 'passée') {
-    updates.status_paid_at = null
-    updates.status_sent_at = null
-    updates.status_delivered_at = null
-  } else if (previous === 'payée') {
-    updates.status_sent_at = null
-    updates.status_delivered_at = null
-  } else if (previous === 'envoyée') {
-    updates.status_delivered_at = null
-  }
-
-  const { data, error } = await supabase
-    .from('commandes')
-    .update(updates)
-    .eq('id', order.id)
-    .eq('status', order.status)
-    .select('*')
-    .single<OrderRecord>()
-
-  if (error) {
-    ordersError.value = error.message
-    return
-  }
-
-  ordersError.value = null
-  orders.value = orders.value.map(o => o.id === order.id ? data : o)
 }
 
 async function markOrderDeleted(order: OrderRecord, delFlag: boolean) {
-  const { data, error } = await supabase
-    .from('commandes')
-    .update({ del_flag: delFlag, updated_at: new Date().toISOString() })
-    .eq('id', order.id)
-    .select('*')
-    .single<OrderRecord>()
-
-  if (error) {
-    ordersError.value = error.message
-    return
+  try {
+    const updated = await callOrderRpc('mark_order_deleted', {
+      order_id: order.id,
+      del_flag: delFlag,
+    })
+    ordersError.value = null
+    applyOrderUpdate(updated)
+  } catch (err: any) {
+    handleOrderError(err)
   }
-
-  ordersError.value = null
-  orders.value = orders.value.map(o => o.id === order.id ? data : o)
 }
 
 function parseOrderItems(order: OrderRecord) {
@@ -702,13 +706,37 @@ function parseOrderItems(order: OrderRecord) {
     }
   }
 
-  return snapshot.map((item, index) => ({
-    key: `${order.id}-${index}`,
-    name: item.name ?? 'Article',
-    size: item.size ?? null,
-    quantity: Number(item.quantity) || 1,
-    total: (Number(item.price) || 0) * (Number(item.quantity) || 1),
-  }))
+  return snapshot.map((item, index) => {
+    const quantity = Number(item.quantity) || 1
+    const optionsText = resolveItemOptions(item)
+    return {
+      key: `${order.id}-${index}`,
+      name: item.name ?? 'Article',
+      optionsText,
+      quantity,
+      total: (Number(item.price) || 0) * quantity,
+    }
+  })
+}
+
+function resolveItemOptions(item: OrderItemSnapshot): string | null {
+  const labels: string[] = []
+  const rawOptions = (item as any).options
+
+  if (Array.isArray(rawOptions)) {
+    for (const entry of rawOptions) {
+      if (entry && typeof entry === 'object') {
+        const optionLabel = (entry as any).optionLabel || (entry as any).optionId || ''
+        const valueLabel = (entry as any).valueLabel || (entry as any).valueId || ''
+        if (optionLabel && valueLabel) labels.push(`${optionLabel}: ${valueLabel}`)
+        else if (valueLabel) labels.push(valueLabel)
+      }
+    }
+  }
+
+  if (!labels.length && item.size) labels.push(item.size)
+
+  return labels.length ? labels.join(', ') : null
 }
 
 function buildStatusTimeline(order: OrderRecord) {

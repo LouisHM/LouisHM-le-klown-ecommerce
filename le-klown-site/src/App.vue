@@ -33,15 +33,7 @@ import Footer from '@/components/Footer.vue'
 import ContactModal from '@/components/ContactModal.vue'
 import Cart from '@/components/Cart.vue'
 import CheckoutModal from '@/components/CheckoutModal.vue'
-
-type CartItem = {
-  productId: string
-  name: string
-  price: number
-  quantity: number
-  size?: string
-  image?: string
-}
+import type { CartItem } from '@/composables/useCart'
 
 const showContact = ref(false)
 const showCart = ref(false)
