@@ -128,6 +128,8 @@ const messages = {
       quantity: '@:common.quantity',
       clear: 'Clear cart',
       subtotal: '@:common.subtotal',
+      selectionRequired: 'Please select the available options.',
+      singleSize: 'One size only',
     },
 
     checkout: {
@@ -178,6 +180,7 @@ const messages = {
       customer: 'Customer',
       statusTimeline: 'Status timeline',
       items: 'Items',
+      inStock: '@:common.stock.in',
       products: 'Product Management',
       packsTitle: 'Available packs',
       addProduct: 'Add product',
@@ -219,6 +222,9 @@ const messages = {
       removeImage: 'Remove',
       imageRequired: 'Add at least one image.',
       imageUrlHint: 'Enter each image URL separately.',
+      uploadImageLabel: 'Upload an image (JPG/PNG)',
+      uploadImageHelp: 'Files are stored in {bucket}.',
+      uploadingImage: 'Uploading…',
       images: 'Images',
       noImage: 'No image',
       saving: '@:common.save',
@@ -603,6 +609,8 @@ const messages = {
       quantity: '@:common.quantity',
       clear: 'Vider le panier',
       subtotal: '@:common.subtotal',
+      selectionRequired: 'Sélectionne les options disponibles.',
+      singleSize: 'Taille unique',
     },
 
     checkout: {
@@ -653,6 +661,7 @@ const messages = {
       customer: 'Client',
       statusTimeline: 'Historique des statuts',
       items: 'Articles',
+      inStock: '@:common.stock.in',
       products: 'Gestion des produits',
       packsTitle: 'Packs disponibles',
       addProduct: 'Ajouter un produit',
@@ -694,6 +703,9 @@ const messages = {
       removeImage: 'Supprimer',
       imageRequired: 'Ajoute au moins une image.',
       imageUrlHint: 'Saisis chaque URL d’image séparément.',
+      uploadImageLabel: 'Téléverser une image (JPG/PNG)',
+      uploadImageHelp: 'Les fichiers sont stockés dans {bucket}.',
+      uploadingImage: 'Téléversement en cours…',
       images: 'Images',
       noImage: 'Aucune image',
       saving: 'Enregistrement…',

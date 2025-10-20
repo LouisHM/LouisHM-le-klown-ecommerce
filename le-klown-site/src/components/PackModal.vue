@@ -129,6 +129,16 @@
                         </label>
                       </div>
                     </div>
+
+                    <div
+                      v-if="!hasSelectableOptions(item)"
+                      class="mt-2"
+                    >
+                      <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/10 text-[11px] uppercase tracking-wide text-light/70">
+                        <i class="fa-solid fa-check text-[10px]"></i>
+                        {{ $t('cart.singleSize') || 'Taille unique' }}
+                      </span>
+                    </div>
                   </div>
                 </article>
               </div>
@@ -235,6 +245,12 @@ function defaultColor(item: PackItem) {
   return available ? available.value : null
 }
 
+function hasSelectableOptions(item: PackItem) {
+  const product = item.product
+  if (!product) return false
+  return product.sizeOptions.length > 0 || product.colorOptions.length > 0
+}
+
 function sizeOptions(item: PackItem): OptionChoice[] {
   const product = item.product
   if (!product || product.sizeOptions.length === 0) return []
@@ -297,12 +313,22 @@ const allSelectionsValid = computed(() => {
     if (!product) continue
 
     const selection = selections[item.id]
-    if (!selection) return false
+    const requiresSize = product.sizeOptions.length > 0
+    const requiresColor = product.colorOptions.length > 0
+    const requiresSelection = requiresSize || requiresColor
 
-    if (product.sizeOptions.length && !selection.size) return false
-    if (product.colorOptions.length && !selection.color) return false
+    if (!selection) {
+      if (requiresSelection) return false
+      continue
+    }
 
-    if (stockFor(product, selection.size, selection.color) <= 0) return false
+    if (requiresSize && !selection.size) return false
+    if (requiresColor && !selection.color) return false
+    if (!requiresSelection) continue
+
+    const sizeValue = requiresSize ? selection.size : null
+    const colorValue = requiresColor ? selection.color : null
+    if (stockFor(product, sizeValue, colorValue) <= 0) return false
   }
   return true
 })
