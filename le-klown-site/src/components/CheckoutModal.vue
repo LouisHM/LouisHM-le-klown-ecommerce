@@ -35,8 +35,8 @@
                   <li v-for="(it, i) in cartItems" :key="i" class="flex justify-between gap-2">
                     <span class="truncate">
                       {{ it.name }}
-                      <template v-if="it.selectedOptions?.length">
-                        — {{ formatCartItemOptions(it.selectedOptions) }}
+                      <template v-if="formatOptions(it.selectedOptions, it.packItems)">
+                        — {{ formatOptions(it.selectedOptions, it.packItems) }}
                       </template>
                       × {{ it.quantity }}
                     </span>
@@ -300,9 +300,24 @@ function lineTotal(it: { price: any; quantity: number }) {
   return priceNum(it.price) * Math.max(1, Number(it.quantity) || 1)
 }
 function formatPrice(n: number) { return n.toFixed(2) }
-function formatCartItemOptions(options?: CartOption[]) {
-  if (!options || options.length === 0) return ''
-  return options.map(opt => opt.valueLabel).join(', ')
+function formatOptions(options?: CartOption[], packItems?: Array<{ productName?: string; size?: string | null; color?: string | null; quantity?: number }> | null) {
+  const parts: string[] = []
+  if (Array.isArray(options)) {
+    parts.push(...options.map(opt => opt.valueLabel).filter(Boolean))
+  }
+  if (Array.isArray(packItems)) {
+    parts.push(
+      ...packItems.map((entry) => {
+        const tokens: string[] = []
+        if (entry.productName) tokens.push(entry.productName)
+        if (entry.size) tokens.push(String(entry.size))
+        if (entry.color) tokens.push(String(entry.color))
+        if (entry.quantity && entry.quantity > 1) tokens.push(`×${entry.quantity}`)
+        return tokens.join(' ')
+      }).filter(Boolean),
+    )
+  }
+  return parts.join(', ')
 }
 
 function extractOrderRecord(payload: any): any {
@@ -397,7 +412,7 @@ async function submit() {
     const qty = Math.max(1, Number(it.quantity) || 1)
     const price = priceNum(it.price)
     const line = (qty * price).toFixed(2)
-    const optionText = formatCartItemOptions(it.selectedOptions)
+    const optionText = formatOptions(it.selectedOptions, (it as any).packItems)
     const suffix = optionText ? ` (${esc(optionText)})` : ''
     const label = `${esc(it.name)}${suffix} × ${qty}`
     return `<tr><td style="padding:6px 0; color:#111;">${label}</td><td style="padding:6px 0;" align="right">${line} €</td></tr>`
@@ -406,12 +421,15 @@ async function submit() {
   let orderRef = buildOrderRef()
 
   const itemsSnapshot = props.cartItems.map(it => ({
+    type: (it as any).type ?? 'product',
     product_id: (it as any).productId ?? null,
+    pack_id: (it as any).packId ?? null,
     variant_id: (it as any).variantId ?? null,
     name: it.name,
     price: Number(it.price) || 0,
     quantity: Number(it.quantity) || 1,
     options: it.selectedOptions ?? [],
+    pack_items: (it as any).packItems ?? [],
     image: (it as any).image ?? null,
   }))
 
@@ -466,9 +484,8 @@ async function submit() {
 
     summaryData.orderRef = orderRef
     summaryData.items = itemsSnapshot.map(item => {
-      const optionText = Array.isArray(item.options) && item.options.length
-        ? ` (${formatCartItemOptions(item.options as CartOption[])})`
-        : ''
+      const formattedOptions = formatOptions(item.options as CartOption[], item.pack_items as any[])
+      const optionText = formattedOptions ? ` (${formattedOptions})` : ''
       return {
         label: `${item.name}${optionText} × ${item.quantity}`,
         total: (item.price || 0) * item.quantity,

@@ -72,7 +72,16 @@
 
     <!-- Section 1 : image large + texte overlay -->
     <section class="relative group" id="section-1">
-      <img src="/assets/img/leklown1.jpg" alt="LE KLOWN sur scène" class="w-full h-[70vh] object-cover grayscale group-hover:grayscale-0 transition duration-700" />
+      <video
+        src="/assets/videos/3D-LEKLOWN.mp4"
+        autoplay
+        muted
+        loop
+        playsinline
+        class="w-full h-[70vh] object-cover grayscale group-hover:grayscale-0 transition duration-700"
+      >
+        {{ $t('home.errorVideo') }}
+      </video>
       <div class="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center text-center opacity-90 group-hover:opacity-0 transition duration-700">
         <h2 class="text-5xl md:text-6xl font-heading mb-4">{{ $t('home.section1Title') }}</h2>
         <p class="text-xl md:text-2xl max-w-2xl">{{ $t('home.section1Text') }}</p>
@@ -89,7 +98,7 @@ const heroVideoEnv = (import.meta as any).env?.VITE_HERO_VIDEO_URL
 const resolvedHeroVideo = typeof heroVideoEnv === 'string' ? heroVideoEnv.trim() : ''
 const heroVideoSrc = resolvedHeroVideo === 'disabled'
   ? ''
-  : (resolvedHeroVideo || '/assets/videos/show1.mp4')
+  : (resolvedHeroVideo || '/assets/videos/teaser-homepage.mp4')
 const hasHeroVideo = heroVideoSrc.trim().length > 0
 
 const fallbackBackground: Record<string, string> = {

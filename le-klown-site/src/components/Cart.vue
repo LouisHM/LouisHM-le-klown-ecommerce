@@ -94,6 +94,18 @@
                 >
                   {{ opt.optionLabel }}: {{ opt.valueLabel }}
                 </span>
+                <div v-if="it.packItems?.length" class="w-full space-y-1">
+                  <div
+                    v-for="entry in it.packItems"
+                    :key="`${entry.productId}-${entry.size || ''}-${entry.color || ''}`"
+                    class="text-[11px] text-light/60"
+                  >
+                    {{ entry.productName }}
+                    <template v-if="entry.size"> — {{ entry.size }}</template>
+                    <template v-if="entry.color"> / {{ entry.color }}</template>
+                    <span class="text-light/40"> × {{ entry.quantity }}</span>
+                  </div>
+                </div>
                 <span
                   v-if="it.stockStatus"
                   :class="['inline-block px-2 py-0.5 text-[11px] font-semibold rounded',

@@ -1,14 +1,25 @@
 // src/composables/useCart.ts
 import { reactive, computed } from 'vue'
 
-export interface CartItem {
+export interface CartPackSelection {
   productId: string
+  productName: string
+  size?: string | null
+  color?: string | null
+  quantity: number
+}
+
+export interface CartItem {
+  type?: 'product' | 'pack'
+  productId?: string
+  packId?: string
   variantId: string
   name: string
   price: number
   quantity: number
   image?: string
   selectedOptions?: CartOption[]
+  packItems?: CartPackSelection[]
   stockStatus?: 'inStock' | 'lowStock' | 'outOfStock'
 }
 

@@ -10,6 +10,7 @@ import AuthCallback from '@/pages/AuthCallback.vue'
 import NotFound from '@/pages/NotFound.vue'
 import UsageConditions from '@/pages/UsageConditions.vue'
 import ConfidentialityConditions from '@/pages/ConfidentialityConditions.vue'
+import Forbidden from '@/pages/Forbidden.vue'
 
 import { supabase } from '@/supabase/client'
 
@@ -21,7 +22,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/useTerms', component: UsageConditions },
   { path: '/privacy', component: ConfidentialityConditions },
   { path: '/auth/callback', component: AuthCallback },
-  { path: '/403', component: { template: '<div class="pt-24 text-center text-light">403 – Forbidden</div>' } },
+  { path: '/403', component: Forbidden },
   { path: '/:pathMatch(.*)*', component: NotFound },
 ]
 

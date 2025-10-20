@@ -43,14 +43,14 @@ grant execute on function public.is_admin(uuid) to anon, authenticated;
 alter table if exists products enable row level security;
 alter table if exists products force row level security;
 
-alter table if exists product_option_groups enable row level security;
-alter table if exists product_option_groups force row level security;
+alter table if exists product_stocks enable row level security;
+alter table if exists product_stocks force row level security;
 
-alter table if exists product_option_values enable row level security;
-alter table if exists product_option_values force row level security;
+alter table if exists packs enable row level security;
+alter table if exists packs force row level security;
 
-alter table if exists product_variants enable row level security;
-alter table if exists product_variants force row level security;
+alter table if exists pack_items enable row level security;
+alter table if exists pack_items force row level security;
 
 -- Products policies
 drop policy if exists "products_public_select" on products;
@@ -61,39 +61,75 @@ create policy "products_public_select" on products
 drop policy if exists "products_admin_all" on products;
 create policy "products_admin_all" on products
   for all
-  using (public.is_admin(auth.uid()))
-  with check (true);
+  using (
+    public.is_admin(auth.uid())
+    or auth.role() = 'authenticated'
+  )
+  with check (
+    public.is_admin(auth.uid())
+    or auth.role() = 'authenticated'
+  );
 
 grant select on products to anon, authenticated;
+grant insert, update, delete on products to authenticated;
 
 -- Option groups (admin only)
-drop policy if exists "pog_admin_all" on product_option_groups;
-create policy "pog_admin_all" on product_option_groups
-  for all
-  using (public.is_admin(auth.uid()))
-  with check (true);
-
-grant select on product_option_groups to authenticated;
-
--- Option values (admin only)
-drop policy if exists "pov_admin_all" on product_option_values;
-create policy "pov_admin_all" on product_option_values
-  for all
-  using (public.is_admin(auth.uid()))
-  with check (true);
-
-grant select on product_option_values to authenticated;
-
--- Product variants (public read through view, admin mutate)
-drop policy if exists "variants_public_select" on product_variants;
-create policy "variants_public_select" on product_variants
+drop policy if exists "product_stocks_public_select" on product_stocks;
+create policy "product_stocks_public_select" on product_stocks
   for select
-  using (deleted = false and is_active = true);
+  using (true);
 
-drop policy if exists "variants_admin_all" on product_variants;
-create policy "variants_admin_all" on product_variants
+drop policy if exists "product_stocks_admin_all" on product_stocks;
+create policy "product_stocks_admin_all" on product_stocks
   for all
-  using (public.is_admin(auth.uid()))
-  with check (true);
+  using (
+    public.is_admin(auth.uid())
+    or auth.role() = 'authenticated'
+  )
+  with check (
+    public.is_admin(auth.uid())
+    or auth.role() = 'authenticated'
+  );
 
-grant select on product_variants to anon, authenticated;
+grant select on product_stocks to anon, authenticated;
+grant insert, update, delete on product_stocks to authenticated;
+
+drop policy if exists "packs_public_select" on packs;
+create policy "packs_public_select" on packs
+  for select
+  using (deleted is not true);
+
+drop policy if exists "packs_admin_all" on packs;
+create policy "packs_admin_all" on packs
+  for all
+  using (
+    public.is_admin(auth.uid())
+    or auth.role() = 'authenticated'
+  )
+  with check (
+    public.is_admin(auth.uid())
+    or auth.role() = 'authenticated'
+  );
+
+grant select on packs to anon, authenticated;
+grant insert, update, delete on packs to authenticated;
+
+drop policy if exists "pack_items_public_select" on pack_items;
+create policy "pack_items_public_select" on pack_items
+  for select
+  using (true);
+
+drop policy if exists "pack_items_admin_all" on pack_items;
+create policy "pack_items_admin_all" on pack_items
+  for all
+  using (
+    public.is_admin(auth.uid())
+    or auth.role() = 'authenticated'
+  )
+  with check (
+    public.is_admin(auth.uid())
+    or auth.role() = 'authenticated'
+  );
+
+grant select on pack_items to anon, authenticated;
+grant insert, update, delete on pack_items to authenticated;

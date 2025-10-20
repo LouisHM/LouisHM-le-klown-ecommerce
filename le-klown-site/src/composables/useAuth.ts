@@ -14,6 +14,9 @@ const authError = ref<string | null>(null)
 const firstName = ref('')
 const lastName = ref('')
 
+const SESSION_STARTED_AT_KEY = 'lk-session-started-at'
+const MAX_SESSION_AGE_MS = 24 * 60 * 60 * 1000 // 24 heures
+
 const isAuthenticated = computed(() => !!user.value)
 const isAdmin = computed(() => role.value === 'admin')
 const displayName = computed(() => {
@@ -30,6 +33,7 @@ function resetAuthState() {
   role.value = 'guest'
   firstName.value = ''
   lastName.value = ''
+  clearSessionStart()
 }
 
 function errorMessage(err: unknown): string {
@@ -127,17 +131,64 @@ async function syncProfile(u: User) {
 }
 
 async function applySession(session: Session | null) {
-  const nextUser = session?.user ?? null
-  user.value = nextUser
-
-  if (!nextUser) {
+  if (!session || !session.user) {
+    user.value = null
     role.value = 'guest'
     firstName.value = ''
     lastName.value = ''
+    clearSessionStart()
     return
   }
 
+  if (typeof window !== 'undefined') {
+    const startedAt = getSessionStart()
+    const now = Date.now()
+    if (startedAt === null) {
+      setSessionStart(now)
+    } else if (now - startedAt > MAX_SESSION_AGE_MS) {
+      clearSessionStart()
+      await supabase.auth.signOut()
+      user.value = null
+      role.value = 'guest'
+      firstName.value = ''
+      lastName.value = ''
+      return
+    }
+  }
+
+  const nextUser = session.user
+  user.value = nextUser
   await syncProfile(nextUser)
+}
+
+function getSessionStart(): number | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(SESSION_STARTED_AT_KEY)
+    if (!raw) return null
+    const value = Number(raw)
+    return Number.isFinite(value) ? value : null
+  } catch {
+    return null
+  }
+}
+
+function setSessionStart(timestamp: number) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(SESSION_STARTED_AT_KEY, String(timestamp))
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearSessionStart() {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(SESSION_STARTED_AT_KEY)
+  } catch {
+    /* ignore */
+  }
 }
 
 export async function refreshSession() {

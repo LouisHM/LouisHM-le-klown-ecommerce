@@ -1,33 +1,12 @@
-// src/composables/useProducts.ts
 import { ref } from 'vue'
-import { supabase } from '@/supabase/client' // use alias
+import { supabase } from '@/supabase/client'
 
-export interface ProductOptionValue {
+export interface ProductStockEntry {
   id: string
-  code: string
-  label: string
-  metadata: Record<string, any> | null
-  sort_order?: number
-}
-
-export interface ProductOptionGroup {
-  id: string
-  code: string
-  label: string
-  required: boolean
-  multi: boolean
-  sort_order?: number
-  values: ProductOptionValue[]
-}
-
-export interface ProductVariant {
-  id: string
+  productId: string
+  size: string | null
+  color: string | null
   stock: number
-  optionValueIds: string[]
-  options: Record<string, string | string[]>
-  isActive?: boolean
-  deleted?: boolean
-  sku?: string | null
 }
 
 export interface Product {
@@ -37,119 +16,157 @@ export interface Product {
   price: number
   images: string[]
   deleted: boolean
-  created_at: string
+  createdAt: string
+  updatedAt: string
+  sizeOptions: string[]
+  colorOptions: string[]
+  stocks: ProductStockEntry[]
   totalStock: number
-  options: ProductOptionGroup[]
-  variants: ProductVariant[]
+}
+
+export interface ProductDraft {
+  id?: string
+  name: string
+  description: string | null
+  price: number
+  images: string[]
+  sizeOptions: string[]
+  colorOptions: string[]
+  stocks: Array<{
+    id?: string
+    size: string | null
+    color: string | null
+    stock: number
+  }>
+  deleted?: boolean
 }
 
 const TABLE = 'products'
-const PUBLIC_VIEW = 'products_public' // vue lecture seule, filtrée
+const STOCK_TABLE = 'product_stocks'
+const isDev = import.meta.env.DEV
+
+function debugLog(...args: any[]) {
+  if (isDev) console.debug(...args)
+}
+
+async function debugAuthState(context: string) {
+  if (!isDev) return
+  try {
+    const { data } = await supabase.auth.getSession()
+    const user = data?.session?.user ?? null
+    debugLog('[useProducts] auth state', context, {
+      userId: user?.id ?? null,
+      email: user?.email ?? null,
+      aud: user?.aud ?? null,
+      appMetadata: user?.app_metadata ?? null,
+    })
+  } catch (err) {
+    debugLog('[useProducts] auth state error', context, err)
+  }
+}
 
 export function useProducts() {
   const products = ref<Product[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  /** Fetch all public products (non supprimés) */
-  async function fetchProducts() {
+  async function fetchProducts(includeDeleted = false) {
     loading.value = true
     error.value = null
 
-    const { data, error: err } = await supabase
-      .from(PUBLIC_VIEW)
-      .select('*')
+    let query = supabase
+      .from(TABLE)
+      .select('*, product_stocks(*)')
       .order('created_at', { ascending: true })
 
-    if (err) error.value = humanizeErr(err)
-    else products.value = Array.isArray(data) ? data.map(mapProduct) : []
+    if (!includeDeleted) query = query.eq('deleted', false)
+
+    const { data, error: err } = await query
+
+    if (err) {
+      error.value = humanizeErr(err)
+      products.value = []
+    } else {
+      products.value = Array.isArray(data) ? data.map(mapProduct) : []
+    }
 
     loading.value = false
     return { data: products.value, error: err }
   }
 
-  /** Fetch single product by ID (public) */
   async function fetchProduct(id: string) {
     const { data, error: err } = await supabase
-      .from(PUBLIC_VIEW)
-      .select('*')
+      .from(TABLE)
+      .select('*, product_stocks(*)')
       .eq('id', id)
       .single()
 
-    return { data: data ? mapProduct(data) : null, error: err }
+    return {
+      data: data ? mapProduct(data) : null,
+      error: err,
+    }
   }
 
-  /** Add a new product (admin only) */
-  async function addProduct(input: {
-    name: string
-    description: string | null
-    price: number
-    images: string[]
-    deleted?: boolean
-  }) {
-    const payload = {
-      deleted: false,
-      ...input,
-      price: Number(input.price) || 0,
-      images: sanitizeStringArray(input.images),
-      has_sizes: false,
-      sizes: [],
-      stock: 0,
-    }
+  async function addProduct(input: ProductDraft) {
+    const payload = buildProductPayload(input)
+    debugLog('[useProducts] addProduct payload', payload)
 
-    const { data, error: err } = await supabase
+    const { data, error: insertError } = await supabase
       .from(TABLE)
-      .insert([payload])
-      .select('*')
+      .insert(payload)
+      .select('*, product_stocks(*)')
       .single()
 
-    return { data: data ? mapProduct(data) : null, error: err }
+    if (insertError) {
+      debugLog('[useProducts] addProduct error', insertError)
+      await debugAuthState('addProduct')
+      return { data: null, error: insertError }
+    }
+
+    const productId = data?.id
+    if (!productId) {
+      return { data: null, error: new Error('Insertion du produit impossible (ID manquant).') }
+    }
+
+    const stockResult = await replaceProductStocks(productId, input.stocks)
+    if (stockResult.error) return { data: null, error: stockResult.error }
+    debugLog('[useProducts] addProduct stock sync success', { productId })
+
+    return fetchProduct(productId)
   }
 
-  /** Update an existing product (admin only) */
-  async function updateProduct(id: string, updates: {
-    name?: string
-    description?: string | null
-    price?: number
-    images?: string[]
-    deleted?: boolean
-  }) {
-    const payload: Record<string, any> = {}
-    if (updates.name !== undefined) payload.name = updates.name
-    if (updates.description !== undefined) payload.description = updates.description
-    if (updates.price !== undefined) payload.price = Number(updates.price) || 0
-    if (updates.images !== undefined) payload.images = sanitizeStringArray(updates.images)
-    if (updates.deleted !== undefined) payload.deleted = !!updates.deleted
+  async function updateProduct(id: string, input: ProductDraft) {
+    const payload = buildProductPayload(input)
+    debugLog('[useProducts] updateProduct payload', { id, payload })
 
-    const { data, error: err } = await supabase
+    const { error: updateError } = await supabase
       .from(TABLE)
       .update(payload)
       .eq('id', id)
-      .select('*')
-      .single()
 
-    return { data: data ? mapProduct(data) : null, error: err }
+    if (updateError) {
+      debugLog('[useProducts] updateProduct error', { id, updateError })
+      await debugAuthState('updateProduct')
+      return { data: null, error: updateError }
+    }
+
+    const stockResult = await replaceProductStocks(id, input.stocks)
+    if (stockResult.error) {
+      debugLog('[useProducts] updateProduct stock sync error', { id, error: stockResult.error })
+      return { data: null, error: stockResult.error }
+    }
+    debugLog('[useProducts] updateProduct stock sync success', { id })
+
+    return fetchProduct(id)
   }
 
-  /** Soft-delete a product (admin only) */
   async function deleteProduct(id: string) {
-    // Soft-delete (set deleted=true) but return the updated row so clients can react
-    const { data, error: err } = await supabase
+    const { error: err } = await supabase
       .from(TABLE)
       .update({ deleted: true })
       .eq('id', id)
-      .select('id, deleted, name')
-      .single()
 
-    return { data, error: err }
-  }
-
-  function humanizeErr(e: any) {
-    const code = e?.code || e?.status
-    if (code === 'PGRST301' || code === 404) return 'Ressource introuvable (table/vue).'
-    if (code === 'PGRST116' || code === 401) return 'Non authentifié.'
-    if (code === 'PGRST302' || code === 403) return 'Accès refusé (RLS/politiques).'
-    return e?.message || 'Erreur inconnue.'
+    return { error: err }
   }
 
   return {
@@ -161,10 +178,76 @@ export function useProducts() {
     addProduct,
     updateProduct,
     deleteProduct,
+    mapProduct,
   }
 }
 
-function mapProduct(raw: any): Product {
+function buildProductPayload(input: ProductDraft) {
+  const images = sanitizeStringArray(input.images)
+  const sizeOptions = dedupeStrings(input.sizeOptions)
+  const colorOptions = dedupeStrings(input.colorOptions)
+  const stocks = sanitizeStocks(input.stocks)
+  let totalStock = 0
+  for (const entry of stocks) {
+    totalStock += Math.max(0, Number(entry.stock) || 0)
+  }
+
+  return {
+    name: input.name,
+    description: input.description,
+    price: Number(input.price) || 0,
+    images,
+    deleted: !!input.deleted,
+    size_options: sizeOptions,
+    color_options: colorOptions,
+    stock: totalStock,
+  }
+}
+
+async function replaceProductStocks(productId: string, rows: ProductDraft['stocks']) {
+  const sanitized = sanitizeStocks(rows).map((row) => ({
+    product_id: productId,
+    size: row.size ?? null,
+    color: row.color ?? null,
+    stock: Number(row.stock) || 0,
+  }))
+  debugLog('[useProducts] replaceProductStocks sanitized', { productId, rows: sanitized })
+
+  const { error: deleteError } = await supabase
+    .from(STOCK_TABLE)
+    .delete()
+    .eq('product_id', productId)
+
+  if (deleteError) {
+    debugLog('[useProducts] replaceProductStocks delete error', { productId, deleteError })
+    return { error: deleteError }
+  }
+
+  if (sanitized.length === 0) return { error: null }
+
+  const { error: insertError } = await supabase
+    .from(STOCK_TABLE)
+    .insert(sanitized)
+
+  if (insertError) {
+    debugLog('[useProducts] replaceProductStocks insert error', { productId, insertError })
+  } else {
+    debugLog('[useProducts] replaceProductStocks insert success', { productId, inserted: sanitized.length })
+  }
+
+  return { error: insertError ?? null }
+}
+
+export function mapProduct(raw: any): Product {
+  const stocks: ProductStockEntry[] = Array.isArray(raw?.product_stocks)
+    ? (raw.product_stocks as any[]).map(mapStockRow)
+    : []
+
+  const sizeOptions = dedupeStrings(raw?.size_options ?? [], stocks.map((row) => row.size))
+  const colorOptions = dedupeStrings(raw?.color_options ?? [], stocks.map((row) => row.color))
+
+  const totalStock = stocks.reduce((sum, row) => sum + Math.max(0, Number(row.stock) || 0), 0)
+
   return {
     id: String(raw.id),
     name: raw.name ?? '',
@@ -172,80 +255,85 @@ function mapProduct(raw: any): Product {
     price: Number(raw.price ?? 0),
     images: sanitizeStringArray(raw.images),
     deleted: !!raw.deleted,
-    created_at: raw.created_at ?? '',
-    totalStock: Number(raw.total_stock ?? raw.stock ?? 0),
-    options: mapOptionGroups(raw.options),
-    variants: mapVariants(raw.variants),
+    createdAt: raw.created_at ?? '',
+    updatedAt: raw.updated_at ?? raw.created_at ?? '',
+    sizeOptions,
+    colorOptions,
+    stocks,
+    totalStock,
   }
 }
 
-function mapOptionGroups(value: any): ProductOptionGroup[] {
-  if (!Array.isArray(value)) return []
-
-  return value
-    .map((group: any, idx: number): ProductOptionGroup => ({
-      id: String(group.id ?? `g-${idx}`),
-      code: group.code ?? `option_${idx + 1}`,
-      label: group.label ?? group.code ?? `Option ${idx + 1}`,
-      required: !!group.required,
-      multi: !!group.multi,
-      sort_order: typeof group.sort_order === 'number' ? group.sort_order : idx,
-      values: mapOptionValues(group.values),
-    }))
-    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-}
-
-function mapOptionValues(value: any): ProductOptionValue[] {
-  if (!Array.isArray(value)) return []
-
-  return value
-    .map((row: any, idx: number): ProductOptionValue => ({
-      id: String(row.id ?? `v-${idx}`),
-      code: row.code ?? `value_${idx + 1}`,
-      label: row.label ?? row.code ?? `Valeur ${idx + 1}`,
-      metadata: row.metadata && typeof row.metadata === 'object' ? row.metadata : null,
-      sort_order: typeof row.sort_order === 'number' ? row.sort_order : idx,
-    }))
-    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-}
-
-function mapVariants(value: any): ProductVariant[] {
-  if (!Array.isArray(value)) return []
-
-  return value.map((row: any): ProductVariant => ({
+function mapStockRow(row: any): ProductStockEntry {
+  return {
     id: String(row.id),
+    productId: String(row.product_id),
+    size: row.size !== undefined && row.size !== null ? String(row.size) : null,
+    color: row.color !== undefined && row.color !== null ? String(row.color) : null,
     stock: Number(row.stock ?? 0),
-    optionValueIds: Array.isArray(row.optionValueIds)
-      ? row.optionValueIds.map((id: any) => String(id))
-      : [],
-    options: normalizeOptions(row.options),
-    isActive: row.is_active ?? row.isActive ?? true,
-    deleted: row.deleted ?? false,
-    sku: row.sku ?? null,
-  }))
-}
-
-function normalizeOptions(value: any): Record<string, string | string[]> {
-  if (!value || typeof value !== 'object') return {}
-  const normalized: Record<string, string | string[]> = {}
-  for (const key of Object.keys(value)) {
-    const entry = (value as any)[key]
-    if (Array.isArray(entry)) {
-      normalized[key] = entry.map((item) => String(item))
-    } else if (entry !== null && entry !== undefined) {
-      normalized[key] = String(entry)
-    }
   }
-  return normalized
 }
 
 function sanitizeStringArray(value: any): string[] {
-  if (Array.isArray(value)) return value.map(String).filter(Boolean)
-  if (typeof value === 'string') {
-    return value
-      .split(',')
-      .map(v => v.trim())
-      .filter(Boolean)
+  if (!Array.isArray(value)) {
+    if (typeof value === 'string') return [value.trim()].filter(Boolean)
+    return []
   }
-  return []
+  return value
+    .map((item) => String(item ?? '').trim())
+    .filter((item) => item.length > 0)
+}
+
+function dedupeStrings(
+  primary: any,
+  additional: Array<string | null | undefined> = [],
+): string[] {
+  const set = new Set<string>()
+  const push = (value: any) => {
+    const normalized = typeof value === 'string' ? value.trim() : ''
+    if (normalized) set.add(normalized)
+  }
+
+  if (Array.isArray(primary)) primary.forEach(push)
+  additional.forEach(push)
+
+  return Array.from(set)
+}
+
+function sanitizeStocks(rows: ProductDraft['stocks']): Array<{ size: string | null; color: string | null; stock: number }> {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return [{ size: null, color: null, stock: 0 }]
+  }
+
+  const seen = new Set<string>()
+  const sanitized: Array<{ size: string | null; color: string | null; stock: number }> = []
+
+  for (const row of rows) {
+    if (!row) continue
+    const size = normalizeNullableString(row.size)
+    const color = normalizeNullableString(row.color)
+    const stock = Math.max(0, Number(row.stock) || 0)
+    const key = `${size ?? ''}__${color ?? ''}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    sanitized.push({ size, color, stock })
+  }
+
+  if (sanitized.length === 0) sanitized.push({ size: null, color: null, stock: 0 })
+  return sanitized
+}
+
+function normalizeNullableString(value: any): string | null {
+  if (value === undefined || value === null) return null
+  const trimmed = String(value).trim()
+  return trimmed.length === 0 ? null : trimmed
+}
+
+export function humanizeErr(e: any) {
+  const code = e?.code || e?.status
+  if (code === 'PGRST301' || code === 404) return 'Ressource introuvable (table/vue).'
+  if (code === 'PGRST116' || code === 401) return 'Non authentifié.'
+  if (code === 'PGRST302' || code === 403) return 'Accès refusé (RLS/politiques).'
+  if (typeof e?.message === 'string') return e.message
+  return 'Erreur inconnue.'
 }

@@ -17,7 +17,7 @@
       <ul
         v-for="event in pastEvents"
         :key="event.id"
-        class="grayscale opacity-60 hover:opacity-90 transition"
+        class="opacity-60 hover:opacity-90 transition"
       >
         <EventCard
           :event="event"

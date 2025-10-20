@@ -107,7 +107,7 @@
         <div class="space-y-4">
           <h2 class="text-3xl font-heading uppercase tracking-widest text-primary">{{ $t('shop.title') }}</h2>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div
+            <article
               v-for="p in products"
               :key="p.id"
               class="bg-backgroundDark/70 border border-light/10 rounded-2xl p-6 flex flex-col gap-4 shadow-lg"
@@ -125,23 +125,46 @@
                 </div>
               </div>
 
-              <div class="flex flex-col gap-1 text-sm text-light/80">
-                <h3 class="text-lg font-semibold text-light">{{ p.name }}</h3>
-                <p class="line-clamp-2">{{ p.description }}</p>
-                <div class="mt-1 text-light">
+              <div class="flex flex-col gap-2 text-sm text-light/80">
+                <div>
+                  <h3 class="text-lg font-semibold text-light">{{ p.name }}</h3>
+                  <p class="line-clamp-2 opacity-80">{{ p.description }}</p>
+                </div>
+                <div class="flex items-center justify-between text-light">
                   <span class="font-bold">{{ (Number(p.price) || 0).toFixed(2) }} €</span>
-                  <span class="ml-2 text-light/70">
-                    {{ $t('admin.totalStock') || 'Stock total' }}: {{ p.totalStock }}
+                  <span class="text-xs text-light/70">
+                    {{ $t('admin.totalStock') || 'Stock total' }} : {{ p.totalStock }}
                   </span>
                 </div>
-                <div v-if="p.options.length" class="text-xs text-light/60 space-y-1 mt-2">
-                  <div
-                    v-for="option in p.options"
-                    :key="option.id"
-                  >
-                    <span class="font-semibold">{{ option.label || option.code }}:</span>
-                    {{ option.values.map(val => val.label || val.code).join(', ') }}
+
+                <div class="text-xs text-light/60 space-y-1">
+                  <div v-if="p.sizeOptions.length">
+                    <span class="font-semibold">{{ $t('admin.sizes') || 'Tailles' }}:</span>
+                    {{ p.sizeOptions.join(', ') }}
                   </div>
+                  <div v-if="p.colorOptions.length">
+                    <span class="font-semibold">{{ $t('admin.colors') || 'Couleurs' }}:</span>
+                    {{ p.colorOptions.join(', ') }}
+                  </div>
+                </div>
+
+                <div class="overflow-x-auto border border-white/10 rounded-lg" v-if="p.stocks.length">
+                  <table class="min-w-full text-[11px] bg-black/20">
+                    <thead>
+                      <tr class="bg-black/40">
+                        <th class="px-2 py-1 text-left">{{ $t('admin.size') || 'Taille' }}</th>
+                        <th class="px-2 py-1 text-left">{{ $t('admin.color') || 'Couleur' }}</th>
+                        <th class="px-2 py-1 text-right">{{ $t('admin.stock') || 'Stock' }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="entry in p.stocks" :key="entry.id" class="border-t border-white/10">
+                        <td class="px-2 py-1">{{ entry.size || '—' }}</td>
+                        <td class="px-2 py-1">{{ entry.color || '—' }}</td>
+                        <td class="px-2 py-1 text-right font-semibold">{{ entry.stock }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -171,10 +194,105 @@
                   {{ $t('admin.delete') }}
                 </button>
               </div>
-            </div>
+            </article>
           </div>
         </div>
-    </section>
+      </section>
+
+      <!-- SECTION PACKS -->
+      <section v-else-if="mode === 'packs'" class="space-y-8">
+        <div
+          ref="packFormContainer"
+          class="bg-backgroundDark/80 border border-light/10 rounded-2xl p-6 shadow-lg"
+        >
+          <AdminPackForm
+            :key="selectedPack?.id || 'new-pack'"
+            :pack="selectedPack"
+            :products="products"
+            @saved="onPackSaved"
+          />
+        </div>
+
+        <div class="space-y-4">
+          <h2 class="text-3xl font-heading uppercase tracking-widest text-primary">
+            {{ $t('admin.packsTitle') || 'Packs disponibles' }}
+          </h2>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <article
+              v-for="pk in packs"
+              :key="pk.id"
+              class="bg-backgroundDark/70 border border-light/10 rounded-2xl p-6 flex flex-col gap-4 shadow-lg"
+            >
+              <div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-dark/30">
+                <img
+                  v-if="firstImage(pk)"
+                  :src="firstImage(pk) ?? undefined"
+                  alt=""
+                  class="w-full h-full object-cover"
+                  @error="onImgError($event)"
+                />
+                <div v-else class="w-full h-full grid place-items-center text-xs opacity-60">
+                  {{ $t('admin.noImage') || 'Aucune image' }}
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-2 text-sm text-light/80">
+                <div>
+                  <h3 class="text-lg font-semibold text-light">{{ pk.name }}</h3>
+                  <p class="line-clamp-2 opacity-80">{{ pk.description }}</p>
+                </div>
+                <div class="flex items-center justify-between text-light">
+                  <span class="font-bold">{{ (Number(pk.price) || 0).toFixed(2) }} €</span>
+                  <span class="text-xs text-light/70">
+                    {{ $t('admin.packItemsCount', { count: pk.items.length }) || `${pk.items.length} produit(s)` }}
+                  </span>
+                </div>
+
+                <ul class="text-xs text-light/70 space-y-1">
+                  <li
+                    v-for="item in pk.items"
+                    :key="item.id"
+                    class="flex justify-between gap-2"
+                  >
+                    <span class="truncate">
+                      {{ item.product?.name || '#' + item.productId }}
+                    </span>
+                    <span class="text-light/50">× {{ item.quantity }}</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div v-if="(pk.images || []).length > 1" class="flex gap-2 overflow-x-auto">
+                <img
+                  v-for="(img, i) in pk.images"
+                  :key="i"
+                  :src="img"
+                  class="w-12 h-12 rounded-lg object-cover border border-light/10"
+                  alt=""
+                />
+              </div>
+
+              <div class="flex flex-col sm:flex-row gap-2 mt-auto">
+                <button
+                  @pointerdown.stop
+                  @click.stop.prevent="editPack(pk)"
+                  class="btn btn-secondary w-full sm:flex-1"
+                >
+                  {{ $t('admin.edit') }}
+                </button>
+                <button
+                  @pointerdown.stop
+                  @click.stop.prevent="confirmDelete('pack', pk.id)"
+                  class="btn btn-red w-full sm:flex-1"
+                >
+                  {{ $t('admin.delete') }}
+                </button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
 
     <!-- SECTION COMMANDES -->
       <section v-else class="space-y-6">
@@ -346,14 +464,16 @@ import { supabase } from '@/supabase/client'
 import EventCard from '@/components/EventCard.vue'
 import AdminEventForm from '@/components/AdminEventForm.vue'
 import AdminProductForm from '@/components/AdminProductForm.vue'
+import AdminPackForm from '@/components/AdminPackForm.vue'
 import EventModal from '@/components/EventModal.vue'
 import { useProducts, type Product } from '@/composables/useProducts'
+import { usePacks, type Pack } from '@/composables/usePacks'
 import { normalizeEventRow, type EventRecord } from '@/composables/useEvents'
 import { role, authReady, refreshSession } from '@/composables/useAuth'
 
 const { t, locale } = useI18n()
 
-type AdminTab = 'events' | 'products' | 'orders'
+type AdminTab = 'events' | 'products' | 'packs' | 'orders'
 
 // State
 const mode = ref<AdminTab>('events')
@@ -361,11 +481,13 @@ const events = ref<EventRecord[]>([])
 const formEvent = ref<Record<string, any> | null>(null)
 const modalEvent = ref<EventRecord | null>(null)
 const selectedProduct = ref<Product | null>(null)
+const selectedPack = ref<Pack | null>(null)
 const showConfirm = ref(false)
 const deleteError = ref<string | null>(null)
 const eventFormContainer = ref<HTMLElement | null>(null)
 const productFormContainer = ref<HTMLElement | null>(null)
-let deleteTarget: { type: 'event'|'product'; id: any } | null = null
+const packFormContainer = ref<HTMLElement | null>(null)
+let deleteTarget: { type: 'event'|'product'|'pack'; id: any } | null = null
 
 const orders = ref<OrderRecord[]>([])
 const ordersLoading = ref(false)
@@ -376,6 +498,7 @@ const statusFilter = ref<'all' | OrderStatus>('all')
 const tabs = computed(() => ([
   { id: 'events' as AdminTab, label: t('admin.tabEvents') },
   { id: 'products' as AdminTab, label: t('admin.tabProducts') },
+  { id: 'packs' as AdminTab, label: t('admin.tabPacks') || 'Packs' },
   { id: 'orders' as AdminTab, label: t('admin.tabOrders') || 'Commandes' },
 ]))
 
@@ -408,8 +531,12 @@ async function fetchEvents() {
   events.value = (data ?? []).map(normalizeEventRow)
 }
 
-function scrollToForm(section: 'events' | 'products') {
-  const target = section === 'events' ? eventFormContainer.value : productFormContainer.value
+function scrollToForm(section: 'events' | 'products' | 'packs') {
+  let target: HTMLElement | null | undefined
+  if (section === 'events') target = eventFormContainer.value
+  else if (section === 'products') target = productFormContainer.value
+  else target = packFormContainer.value
+
   nextTick(() => {
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
     else window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -430,6 +557,7 @@ async function onEventSaved() {
 
 // Products
 const { products, fetchProducts, deleteProduct } = useProducts()
+const { packs, fetchPacks, deletePack } = usePacks()
 
 function editProduct(p: Product) {
   mode.value = 'products'
@@ -439,12 +567,25 @@ function editProduct(p: Product) {
 
 async function onProductSaved() {
   selectedProduct.value = null
-  await fetchProducts()
+  await Promise.all([fetchProducts(), fetchPacks()])
   scrollToForm('products')
 }
 
+// Packs
+function editPack(p: Pack) {
+  mode.value = 'packs'
+  selectedPack.value = JSON.parse(JSON.stringify(p)) as Pack
+  scrollToForm('packs')
+}
+
+async function onPackSaved() {
+  selectedPack.value = null
+  await Promise.all([fetchPacks(), fetchProducts()])
+  scrollToForm('packs')
+}
+
 // Delete confirm
-function confirmDelete(type: 'event'|'product', id: any) {
+function confirmDelete(type: 'event'|'product'|'pack', id: any) {
   deleteTarget = { type, id }
   showConfirm.value = true
   deleteError.value = null
@@ -464,13 +605,14 @@ async function performDelete() {
       const { error } = await supabase.from('evenements').delete().eq('id', deleteTarget.id)
       if (error) throw error
       await fetchEvents()
-    } else {
-      const { data, error } = await deleteProduct(deleteTarget.id)
+    } else if (deleteTarget.type === 'product') {
+      const { error } = await deleteProduct(deleteTarget.id)
       if (error) throw error
-      if (!data || data.deleted !== true) {
-        throw new Error('La suppression n’a pas été confirmée par Supabase.')
-      }
       await fetchProducts()
+    } else if (deleteTarget.type === 'pack') {
+      const { error } = await deletePack(deleteTarget.id)
+      if (error) throw error
+      await fetchPacks()
     }
     closeConfirm()
   } catch (err: any) {
@@ -485,7 +627,7 @@ const ready = ref(false)
 
 async function ensureAdminData() {
   if (role.value === 'admin') {
-    await Promise.all([fetchEvents(), fetchProducts(), fetchOrders()])
+    await Promise.all([fetchEvents(), fetchProducts(), fetchPacks(), fetchOrders()])
   }
 }
 
@@ -507,6 +649,9 @@ watch(role, async (value, previous) => {
 watch(mode, async (value) => {
   if (value === 'orders' && role.value === 'admin' && orders.value.length === 0 && !ordersLoading.value) {
     await fetchOrders()
+  }
+  if (value === 'packs' && role.value === 'admin' && packs.value.length === 0) {
+    await fetchPacks()
   }
 })
 
