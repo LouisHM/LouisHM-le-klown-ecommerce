@@ -9,20 +9,7 @@
       </div>
       <div v-else-if="globalError" class="text-center text-red-500">{{ globalError }}</div>
       <div v-else class="space-y-12">
-        <section v-if="packs.length" class="space-y-6">
-          <h2 class="text-2xl font-heading text-primary text-center md:text-left">
-            {{ $t('shop.bundleTitle') || 'Packs exclusifs' }}
-          </h2>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            <PackCard
-              v-for="pack in packs"
-              :key="pack.id"
-              :pack="pack"
-            />
-          </div>
-        </section>
-
-        <section class="space-y-6">
+                <section class="space-y-6">
           <h2 class="text-2xl font-heading text-primary text-center md:text-left">
             {{ $t('shop.productsTitle') || 'Produits' }}
           </h2>
@@ -39,6 +26,18 @@
           <p v-else class="text-center text-light/60">
             {{ $t('shop.empty') || 'Aucun produit disponible pour le moment.' }}
           </p>
+        </section>
+        <section v-if="packs.length" class="space-y-6">
+          <h2 class="text-2xl font-heading text-primary text-center md:text-left">
+            {{ $t('shop.bundleTitle') || 'Packs exclusifs' }}
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            <PackCard
+              v-for="pack in packs"
+              :key="pack.id"
+              :pack="pack"
+            />
+          </div>
         </section>
       </div>
     </div>

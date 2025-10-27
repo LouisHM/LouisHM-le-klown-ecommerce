@@ -113,7 +113,7 @@
             {{ $t(item.label) }}
           </span>
           <span
-            class="pointer-events-none absolute inset-x-3 -inset-y-1 rounded-full bg-primary/20 shadow-[0_12px_28px_rgba(239,68,68,0.65)] opacity-0 transition-opacity duration-300 z-0"
+            class="pointer-events-none absolute inset-x-0 -inset-y-1 rounded-full bg-primary/20 shadow-[0_12px_28px_rgba(239,68,68,0.65)] opacity-0 transition-opacity duration-300 z-0"
             :class="{
               'opacity-100': currentPath === item.path,
               'group-hover:opacity-85': currentPath !== item.path
