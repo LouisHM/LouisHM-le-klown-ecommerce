@@ -23,7 +23,7 @@
         <!-- Titre -->
         <h1
           :class="showHero ? 'animate-slide-in-left' : 'opacity-0 -translate-x-full'"
-          class="text-5xl md:text-7xl font-heading mb-6 tracking-tight transition-all duration-700"
+          class="text-5xl md:text-7xl font-heading mb-6 tracking-tight"
         >
           {{ $t('home.welcome') }}
         </h1>
@@ -31,7 +31,7 @@
         <!-- Sous-titre -->
         <p
           :class="showHero ? 'animate-slide-in-right  w-full' : 'opacity-0 translate-x-full'"
-          class="text-xl max-w-5xl mb-10 transition-all duration-700 text-xs md:text-xl"
+          class="text-xl max-w-5xl mb-10 text-xs md:text-xl"
         >
           {{ $t('home.intro') }}
         </p>
@@ -40,7 +40,7 @@
         <div class="flex flex-col md:flex-col gap-3 mb-16 ">
           <button
             :class="showHero ? 'animate-slide-in-right opacity-85' : 'opacity-0 translate-x-full'"
-            class="bg-primary  text-light px-6 py-3 rounded-full font-semibold hover:bg-light hover:text-dark transition-all duration-700"
+            class="bg-primary  text-light px-6 py-3 rounded-full font-semibold hover:bg-light hover:text-dark transition-colors duration-700"
             @click="showContact = true"
           >
             {{ $t('home.bookMe') }}
@@ -52,7 +52,7 @@
           <RouterLink
             to="/events"
             :class="showHero ? 'animate-slide-in-left opacity-85' : 'opacity-0 -translate-x-full'"
-            class="hover:bg-light  hover:text-dark px-6 py-3 rounded-full font-semibold bg-dark text-light hover:text-dark transition-all duration-700"
+            class="hover:bg-light  hover:text-dark px-6 py-3 rounded-full font-semibold bg-dark text-light hover:text-dark transition-colors duration-700"
           >
             {{ $t('home.seeLive') }}
           </RouterLink>
@@ -62,7 +62,7 @@
         <button
           v-show="showHero "
           @click="scrollToNextSection"
-          class="opacity-0 animate-fade-in text-xl text-dark bg-light text-primary rounded-full p-2 aspect-square hover:text-light hover:bg-dark transition"
+          class="opacity-0 animate-fade-in text-xl text-dark bg-light text-primary rounded-full p-2 aspect-square hover:text-light hover:bg-dark transition-colors"
         >
         <i class="fa-solid fa-arrow-down"></i>
         </button>

@@ -85,8 +85,7 @@ const messages = {
 
     home: {
       welcome: 'Welcome to the KLOWN universe',
-      intro:
-        'Straight out of a horror movie, the Klown creates a dark universe on the border of Techno, Trance, and Rave, mixing distressing clusters and chilling bass kicks. Started in 2019, his red nose and balloons have traveled the globe with dates all over France as well as the United States, Italy, Turkey, Poland, and Spain. The Klown has established himself as a true showman, as technically talented as he is dynamic on stage. So? Do you also want a balloon?',
+      intro: 'Straight out of a horror film, KLOWN creates a dark universe on the border between Techno, Trance, and Rave, mixing eerie staging and percussive bass. Launched in 2019, its red nose and balloons have traveled the world with dates throughout France and internationally. KLOWN has established itself as a true showman, as technically talented as it is dynamic on stage. So? Do you want a balloon?',
       bookMe: 'Booking',
       seeLive: 'Next shows',
       section1Title: 'Total Immersion',
@@ -568,8 +567,7 @@ const messages = {
 
     home: {
       welcome: 'Bienvenue dans l’univers du KLOWN',
-      intro:
-        'Tout droit sorti d’un film d’horreur, le KLOWN crée un univers sombre à la frontière de la Techno, de la Trance et du Rave, mêlant clusters angoissants et basses percutantes. Lancé en 2019, son nez rouge et ses ballons ont voyagé à travers le monde avec des dates partout en France ainsi qu’aux États-Unis, en Italie, en Turquie, en Pologne et en Espagne. Le KLOWN s’est imposé comme un véritable showman, aussi talentueux techniquement que dynamique sur scène. Alors ? Tu veux un ballon ?',
+      intro: 'Tout droit sorti d’un film d’horreur, le KLOWN crée un univers sombre à la frontière de la Techno, de la Trance et de la Rave, mêlant mise en scène angoissantes et basses percutantes. Lancé en 2019, son nez rouge et ses ballons ont voyagé à travers le monde avec des dates partout en France et à l’international. Le KLOWN s’est imposé comme un véritable showman, aussi talentueux techniquement que dynamique sur scène. Alors ? Tu veux un ballon ?',
       bookMe: 'Booking',
       seeLive: 'Prochains shows',
       section1Title: 'Immersion Totale',
