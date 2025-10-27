@@ -207,6 +207,32 @@ const stockMap = computed(() => {
   return map
 })
 
+function stockIdFor(size: string | null, color: string | null): string | null {
+  const normalizedSize = (size ?? '').trim().toLowerCase()
+  const normalizedColor = (color ?? '').trim().toLowerCase()
+
+  const direct = props.product.stocks.find((entry) => {
+    const entrySize = (entry.size ?? '').trim().toLowerCase()
+    const entryColor = (entry.color ?? '').trim().toLowerCase()
+    return entrySize === normalizedSize && entryColor === normalizedColor
+  })
+  if (direct) return direct.id
+
+  const sizeMatch = props.product.stocks.find((entry) => {
+    const entrySize = (entry.size ?? '').trim().toLowerCase()
+    const entryColor = (entry.color ?? '').trim().toLowerCase()
+    return entrySize === normalizedSize && !entryColor && !normalizedColor
+  })
+  if (sizeMatch) return sizeMatch.id
+
+  const fallback = props.product.stocks.find((entry) => {
+    const entrySize = (entry.size ?? '').trim()
+    const entryColor = (entry.color ?? '').trim()
+    return entrySize === '' && entryColor === ''
+  })
+  return fallback ? fallback.id : null
+}
+
 const sizeOptions = computed<OptionChoice[]>(() => {
   if (props.product.sizeOptions.length === 0) {
     return []
@@ -373,6 +399,7 @@ function addToCart() {
     selectedSize.value || '-',
     selectedColor.value || '-',
   ].join('|')
+  const stockId = stockIdFor(selectedSize.value, selectedColor.value)
 
   addItem({
     type: 'product',
@@ -384,6 +411,9 @@ function addToCart() {
     image: props.product.images?.[0],
     selectedOptions,
     stockStatus: stockStatus.value,
+    stockId,
+    size: selectedSize.value || null,
+    color: selectedColor.value || null,
   })
 
   emit('close')

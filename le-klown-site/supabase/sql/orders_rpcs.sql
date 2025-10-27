@@ -18,6 +18,229 @@ $$;
 comment on function public.is_admin(uuid)
   is 'Returns true if the given user (or current auth.uid) has the admin role.';
 
+create or replace function public.validate_product_stock(
+  target_stock_id uuid,
+  target_product_id uuid,
+  target_size text,
+  target_color text,
+  qty integer
+)
+returns table(stock_id uuid, product_id_out uuid, size_out text, color_out text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  resolved_stock_id uuid := target_stock_id;
+  resolved_product_id uuid := target_product_id;
+  size_value text := nullif(trim(target_size), '');
+  color_value text := nullif(trim(target_color), '');
+  size_row text;
+  color_row text;
+  available integer;
+  required_qty integer := greatest(0, coalesce(qty, 0));
+begin
+  if resolved_stock_id is not null then
+    select product_id, stock, size, color
+      into resolved_product_id, available, size_row, color_row
+    from product_stocks
+    where id = resolved_stock_id;
+  end if;
+
+  if resolved_stock_id is null and resolved_product_id is not null then
+    select id, stock, size, color
+      into resolved_stock_id, available, size_row, color_row
+    from product_stocks
+    where product_id = resolved_product_id
+      and lower(coalesce(size, '')) = lower(coalesce(size_value, ''))
+      and lower(coalesce(color, '')) = lower(coalesce(color_value, ''))
+    limit 1;
+  end if;
+
+  if resolved_product_id is null then
+    resolved_product_id := target_product_id;
+  end if;
+
+  if resolved_stock_id is null and available is null and resolved_product_id is not null then
+    select stock into available from products where id = resolved_product_id;
+  end if;
+
+  if required_qty > 0 then
+    if resolved_product_id is null then
+      raise exception using errcode = 'P0001', message = 'STOCK_UNAVAILABLE', detail = 'product_missing';
+    end if;
+
+    available := coalesce(available, 0);
+    if available < required_qty then
+      raise exception using errcode = 'P0001', message = 'STOCK_UNAVAILABLE', detail = format('product=%s,size=%s,color=%s', resolved_product_id, coalesce(size_row, size_value, ''), coalesce(color_row, color_value, ''));
+    end if;
+  end if;
+
+  stock_id := resolved_stock_id;
+  product_id_out := resolved_product_id;
+  size_out := coalesce(size_row, size_value);
+  color_out := coalesce(color_row, color_value);
+  return;
+end;
+$$;
+
+comment on function public.validate_product_stock(uuid, uuid, text, text, integer)
+  is 'Checks availability for a product stock row/combination. Raises STOCK_UNAVAILABLE on failure.';
+
+create or replace function public.adjust_product_stock(
+  target_stock_id uuid,
+  target_product_id uuid,
+  target_size text,
+  target_color text,
+  qty integer,
+  factor integer
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  resolved_stock_id uuid := target_stock_id;
+  resolved_product_id uuid := target_product_id;
+  size_value text := nullif(trim(target_size), '');
+  color_value text := nullif(trim(target_color), '');
+  normalized_size text := lower(coalesce(size_value, ''));
+  normalized_color text := lower(coalesce(color_value, ''));
+  adjust_qty integer := greatest(0, coalesce(qty, 0));
+  delta integer := factor * adjust_qty;
+  validation record;
+begin
+  if adjust_qty = 0 or factor = 0 then
+    return;
+  end if;
+
+  select *
+    into validation
+  from public.validate_product_stock(
+    resolved_stock_id,
+    resolved_product_id,
+    target_size,
+    target_color,
+    case when factor < 0 then adjust_qty else 0 end
+  );
+
+  resolved_stock_id := validation.stock_id;
+  resolved_product_id := coalesce(validation.product_id_out, resolved_product_id);
+  size_value := coalesce(validation.size_out, size_value);
+  color_value := coalesce(validation.color_out, color_value);
+
+  if resolved_stock_id is null then
+    if resolved_product_id is null then
+      raise exception using errcode = 'P0001', message = 'STOCK_UNAVAILABLE', detail = 'product_missing';
+    end if;
+
+    begin
+      insert into product_stocks (product_id, size, color, stock)
+      values (
+        resolved_product_id,
+        size_value,
+        color_value,
+        case when factor < 0 then adjust_qty else 0 end
+      )
+      returning id into resolved_stock_id;
+    exception
+      when unique_violation then
+        select id
+          into resolved_stock_id
+        from product_stocks
+        where product_id = resolved_product_id
+          and lower(coalesce(size, '')) = lower(coalesce(size_value, ''))
+          and lower(coalesce(color, '')) = lower(coalesce(color_value, ''))
+        limit 1;
+        if resolved_stock_id is null then
+          raise;
+        end if;
+    end;
+  end if;
+
+  update product_stocks
+    set stock = stock + delta,
+        updated_at = now()
+    where id = resolved_stock_id
+      and (factor >= 0 or stock >= adjust_qty)
+    returning product_id into resolved_product_id;
+
+  if not found then
+    if factor < 0 then
+      raise exception using errcode = 'P0001', message = 'STOCK_UNAVAILABLE', detail = format('product=%s,size=%s,color=%s', resolved_product_id, coalesce(size_value, ''), coalesce(color_value, ''));
+    else
+      raise exception using errcode = 'P0001', message = 'STOCK_UNAVAILABLE', detail = format('product=%s,size=%s,color=%s', resolved_product_id, coalesce(size_value, ''), coalesce(color_value, ''));
+    end if;
+  end if;
+
+update products
+  set stock = greatest(0, coalesce(stock, 0) + delta),
+      updated_at = now()
+  where id = resolved_product_id;
+end;
+$$;
+
+comment on function public.adjust_product_stock(uuid, uuid, text, text, integer, integer)
+  is 'Adjusts a product_stocks row (and parent products.stock) by quantity × factor.';
+
+create or replace function public.validate_order_items_stock(items jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  item jsonb;
+  pack_item jsonb;
+  quantity integer;
+  pack_quantity integer;
+  item_type text;
+  validation record;
+begin
+  if items is null then
+    raise exception 'Items payload is required.' using errcode = 'P0001';
+  end if;
+
+  for item in select jsonb_array_elements(coalesce(items, '[]'::jsonb)) loop
+    quantity := greatest(0, coalesce((item->>'quantity')::int, 0));
+    if quantity <= 0 then
+      continue;
+    end if;
+
+    item_type := lower(coalesce(item->>'type', 'product'));
+
+    if item_type = 'pack' then
+      for pack_item in select jsonb_array_elements(coalesce(item->'pack_items', '[]'::jsonb)) loop
+        pack_quantity := greatest(0, coalesce((pack_item->>'quantity')::int, 0)) * quantity;
+        select *
+          into validation
+        from public.validate_product_stock(
+          nullif(pack_item->>'product_stock_id', '')::uuid,
+          nullif(pack_item->>'product_id', '')::uuid,
+          nullif(pack_item->>'size', ''),
+          nullif(pack_item->>'color', ''),
+          pack_quantity
+        );
+      end loop;
+    else
+      select *
+        into validation
+      from public.validate_product_stock(
+        nullif(item->>'product_stock_id', '')::uuid,
+        nullif(item->>'product_id', '')::uuid,
+        nullif(item->>'size', ''),
+        nullif(item->>'color', ''),
+        quantity
+      );
+    end if;
+  end loop;
+end;
+$$;
+
+comment on function public.validate_order_items_stock(jsonb)
+  is 'Validates availability for each item contained in a JSONB array.';
+
 create or replace function public.adjust_order_items_stock(items jsonb, factor integer)
 returns void
 language plpgsql
@@ -26,53 +249,51 @@ set search_path = public
 as $$
 declare
   item jsonb;
-  variant_id uuid;
+  pack_item jsonb;
   quantity integer;
-  updated_id uuid;
+  pack_quantity integer;
+  item_type text;
 begin
   if items is null then
     raise exception 'Items payload is required.' using errcode = 'P0001';
   end if;
 
   for item in select jsonb_array_elements(coalesce(items, '[]'::jsonb)) loop
-    variant_id := (item->>'variant_id')::uuid;
-    quantity := coalesce((item->>'quantity')::int, 0);
-
-    if variant_id is null or quantity <= 0 then
+    quantity := greatest(0, coalesce((item->>'quantity')::int, 0));
+    if quantity <= 0 then
       continue;
     end if;
 
-    if factor < 0 then
-      update product_variants
-        set stock = stock + (factor * quantity),
-            updated_at = now()
-        where id = variant_id
-          and deleted = false
-          and is_active = true
-          and stock >= quantity
-        returning id into updated_id;
+    item_type := lower(coalesce(item->>'type', 'product'));
 
-      if not found then
-        raise exception 'Stock insuffisant pour la variante %', variant_id using errcode = 'P0001';
-      end if;
+    if item_type = 'pack' then
+      for pack_item in select jsonb_array_elements(coalesce(item->'pack_items', '[]'::jsonb)) loop
+        pack_quantity := greatest(0, coalesce((pack_item->>'quantity')::int, 0)) * quantity;
+        perform public.adjust_product_stock(
+          nullif(pack_item->>'product_stock_id', '')::uuid,
+          nullif(pack_item->>'product_id', '')::uuid,
+          nullif(pack_item->>'size', ''),
+          nullif(pack_item->>'color', ''),
+          pack_quantity,
+          factor
+        );
+      end loop;
     else
-      update product_variants
-        set stock = stock + (factor * quantity),
-            updated_at = now()
-        where id = variant_id
-          and deleted = false
-        returning id into updated_id;
-
-      if not found then
-        raise exception 'Variante % introuvable.', variant_id using errcode = 'P0001';
-      end if;
+      perform public.adjust_product_stock(
+        nullif(item->>'product_stock_id', '')::uuid,
+        nullif(item->>'product_id', '')::uuid,
+        nullif(item->>'size', ''),
+        nullif(item->>'color', ''),
+        quantity,
+        factor
+      );
     end if;
   end loop;
 end;
 $$;
 
 comment on function public.adjust_order_items_stock(jsonb, integer)
-  is 'Internal helper: adjusts stock for each variant contained in a JSONB items array. factor = -1 reserves stock, factor = +1 restocks.';
+  is 'Internal helper: adjusts stock for each product stock row contained in a JSONB items array. factor = -1 reserves stock, factor = +1 restocks.';
 
 create or replace function public.create_order_with_stock(payload jsonb)
 returns commandes
@@ -93,6 +314,7 @@ begin
     raise exception 'Impossible de créer une commande sans articles.' using errcode = 'P0001';
   end if;
 
+  perform public.validate_order_items_stock(items);
   perform public.adjust_order_items_stock(items, -1);
 
   insert into commandes (

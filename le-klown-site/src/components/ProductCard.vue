@@ -31,9 +31,6 @@
     <div class="p-4 flex flex-col gap-3">
       <div class="flex items-start justify-between gap-3">
         <h3 class="text-base font-semibold text-light leading-tight flex-1">{{ product.name }}</h3>
-        <span :class="['px-2 py-1 text-[11px] rounded font-semibold', stockClass]">
-          {{ stockLabel }}
-        </span>
       </div>
 
       <div class="text-sm text-light/70 line-clamp-2">
@@ -42,8 +39,11 @@
 
       <div class="flex items-center justify-between text-light">
         <span class="text-lg font-bold">{{ product.price.toFixed(2) }} €</span>
-        <span class="text-xs text-light/60">
-          {{ $t('admin.totalStock') || 'Stock total' }} : {{ product.totalStock }}
+        <span
+          class="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded"
+          :class="stockClass"
+        >
+          {{ stockLabel }}
         </span>
       </div>
 

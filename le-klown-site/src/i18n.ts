@@ -130,6 +130,8 @@ const messages = {
       subtotal: '@:common.subtotal',
       selectionRequired: 'Please select the available options.',
       singleSize: 'One size only',
+      stockUnavailable: 'Some items are no longer available. Please refresh your cart.',
+      stockUnavailableItem: '{item} is no longer available. Please update your cart.',
     },
 
     checkout: {
@@ -567,7 +569,7 @@ const messages = {
     home: {
       welcome: 'Bienvenue dans l’univers du KLOWN',
       intro:
-        'Tout droit sorti d’un film d’horreur, le KLOWN crée un univers sombre à la frontière de la Techno, de la Trance et du Rave, mêlant clusters angoissants et basses percutantes. Lancé en 2019, son nez rouge et ses ballons ont voyagé à travers le monde avec des dates partout en France ainsi qu’aux États-Unis, en Italie, en Turquie, en Pologne et en Espagne. Le KLOWN s’est imposé comme un véritable showman, aussi talentueux techniquement que dynamique sur scène. Alors ? Vous voulez aussi un ballon ?',
+        'Tout droit sorti d’un film d’horreur, le KLOWN crée un univers sombre à la frontière de la Techno, de la Trance et du Rave, mêlant clusters angoissants et basses percutantes. Lancé en 2019, son nez rouge et ses ballons ont voyagé à travers le monde avec des dates partout en France ainsi qu’aux États-Unis, en Italie, en Turquie, en Pologne et en Espagne. Le KLOWN s’est imposé comme un véritable showman, aussi talentueux techniquement que dynamique sur scène. Alors ? Tu veux un ballon ?',
       bookMe: 'Booking',
       seeLive: 'Prochains shows',
       section1Title: 'Immersion Totale',
@@ -611,6 +613,8 @@ const messages = {
       subtotal: '@:common.subtotal',
       selectionRequired: 'Sélectionne les options disponibles.',
       singleSize: 'Taille unique',
+      stockUnavailable: 'Certains articles ne sont plus disponibles. Rafraîchis le panier.',
+      stockUnavailableItem: '{item} n’est plus disponible. Mets ton panier à jour.',
     },
 
     checkout: {

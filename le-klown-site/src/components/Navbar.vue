@@ -27,8 +27,8 @@
           <span
             class="pointer-events-none absolute -top-1 left-0 h-[3px] bg-red-600 transition-all duration-300"
             :class="{
-              'w-full': $route.path === item.path,
-              'w-0 group-hover:w-full': $route.path !== item.path
+              'w-full': currentPath === item.path,
+              'w-0 group-hover:w-full': currentPath !== item.path
             }"
           ></span>
         </RouterLink>
@@ -99,18 +99,24 @@
 
     <!-- Mobile menu -->
 <div v-if="isOpen && authReady" class="md:hidden bg-dark flex flex-col py-6 space-y-4 items-center text-base">
-        <div v-for="item in filteredLinks" :key="item.path" class="relative w-full text-center">
-        <RouterLink 
+      <div
+        v-for="item in filteredLinks"
+        :key="item.path"
+        class="relative w-full text-center"
+      >
+        <RouterLink
           :to="item.path"
-          class="relative px-4 py-2 group inline-block"
+          class="relative z-[1] px-4 py-2 group inline-block"
           @click="isOpen = false"
         >
-          {{ $t(item.label) }}
+          <span class="relative z-[2] text-light font-semibold">
+            {{ $t(item.label) }}
+          </span>
           <span
-            class="pointer-events-none absolute -top-1 left-0 h-[3px] bg-red-600 transition-all duration-300"
+            class="pointer-events-none absolute inset-x-3 -inset-y-1 rounded-full bg-primary/20 shadow-[0_12px_28px_rgba(239,68,68,0.65)] opacity-0 transition-opacity duration-300 z-0"
             :class="{
-              'w-full': $route.path === item.path,
-              'w-0 group-hover:w-full': $route.path !== item.path
+              'opacity-100': currentPath === item.path,
+              'group-hover:opacity-85': currentPath !== item.path
             }"
           ></span>
         </RouterLink>
@@ -128,6 +134,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted  } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AuthButton from '@/components/AuthButton.vue'
 import { role, authReady, refreshSession } from '@/composables/useAuth'
@@ -183,6 +190,12 @@ const allLinks = [
 const filteredLinks = computed(() =>
   allLinks.filter(link => link.path !== '/admin' || role.value === 'admin')
 )
+
+const route = useRoute()
+const currentPath = computed(() => {
+  const path = route?.path
+  return path && path.length ? path : '/'
+})
 
 // Mise à jour du rôle (utilisé au login/logout)
 async function updateUserRole() {

@@ -82,8 +82,11 @@
                       <h3 class="font-semibold text-sm">{{ item.product?.name || '#' + item.productId }}</h3>
                       <p class="text-xs text-light/60">{{ $t('admin.quantity') || 'Quantité' }} : {{ item.quantity }}</p>
                     </div>
-                    <span class="text-xs text-light/50">
-                      {{ productTotalStock(item) }} {{ $t('admin.inStock') || 'en stock' }}
+                    <span
+                      class="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded"
+                      :class="stockBadgeClass(stockStatusForItem(item))"
+                    >
+                      {{ stockStatusText(stockStatusForItem(item)) }}
                     </span>
                   </header>
 
@@ -225,10 +228,31 @@ watch(
   { immediate: true },
 )
 
-function productTotalStock(item: PackItem) {
+function stockStatusForItem(item: PackItem): 'inStock' | 'lowStock' | 'outOfStock' {
   const product = item.product
-  if (!product) return 0
-  return product.totalStock
+  if (!product) return 'outOfStock'
+  const selection = selections[item.id]
+  const size = selection?.size ?? null
+  const color = selection?.color ?? null
+  const available = stockFor(product, size, color)
+  if (available <= 0) return 'outOfStock'
+  if (available < 10) return 'lowStock'
+  return 'inStock'
+}
+
+function stockBadgeClass(status: 'inStock' | 'lowStock' | 'outOfStock') {
+  switch (status) {
+    case 'inStock':
+      return 'bg-success/80 text-dark'
+    case 'lowStock':
+      return 'bg-warning/80 text-dark'
+    default:
+      return 'bg-error/80 text-light'
+  }
+}
+
+function stockStatusText(status: 'inStock' | 'lowStock' | 'outOfStock') {
+  return $t(`shop.stock.${status}`)
 }
 
 function defaultSize(item: PackItem) {
@@ -307,6 +331,33 @@ function stockFor(product: Product | undefined | null, size: string | null, colo
   )
 }
 
+function stockIdForProduct(product: Product | undefined | null, size: string | null, color: string | null): string | null {
+  if (!product) return null
+  const normalizedSize = (size ?? '').trim().toLowerCase()
+  const normalizedColor = (color ?? '').trim().toLowerCase()
+
+  const direct = product.stocks.find((entry) => {
+    const entrySize = (entry.size ?? '').trim().toLowerCase()
+    const entryColor = (entry.color ?? '').trim().toLowerCase()
+    return entrySize === normalizedSize && entryColor === normalizedColor
+  })
+  if (direct) return direct.id
+
+  const sizeMatch = product.stocks.find((entry) => {
+    const entrySize = (entry.size ?? '').trim().toLowerCase()
+    const entryColor = (entry.color ?? '').trim().toLowerCase()
+    return entrySize === normalizedSize && entryColor === '' && normalizedColor === ''
+  })
+  if (sizeMatch) return sizeMatch.id
+
+  const fallback = product.stocks.find((entry) => {
+    const entrySize = (entry.size ?? '').trim()
+    const entryColor = (entry.color ?? '').trim()
+    return entrySize === '' && entryColor === ''
+  })
+  return fallback ? fallback.id : null
+}
+
 const allSelectionsValid = computed(() => {
   for (const item of props.pack.items) {
     const product = item.product
@@ -342,32 +393,44 @@ function addPackToCart() {
   const selectedOptions: CartOption[] = []
   const selectionSummary: string[] = []
 
-  for (const item of props.pack.items) {
+  const detailedItems = props.pack.items.map((item) => {
     const product = item.product
-    if (!product) continue
     const selection = selections[item.id]
+    const size = selection?.size ?? null
+    const color = selection?.color ?? null
+    const stockId = stockIdForProduct(product, size, color)
 
-    if (selection.size) {
-      selectedOptions.push({
-        optionId: `${product.id}-size`,
-        optionLabel: `${product.name} — ${$t('admin.size') || 'Taille'}`,
-        valueLabel: selection.size,
-      })
-    }
-    if (selection.color) {
-      selectedOptions.push({
-        optionId: `${product.id}-color`,
-        optionLabel: `${product.name} — ${$t('admin.color') || 'Couleur'}`,
-        valueLabel: selection.color,
-      })
+    if (product) {
+      if (size) {
+        selectedOptions.push({
+          optionId: `${product.id}-size`,
+          optionLabel: `${product.name} — ${$t('admin.size') || 'Taille'}`,
+          valueLabel: size,
+        })
+      }
+      if (color) {
+        selectedOptions.push({
+          optionId: `${product.id}-color`,
+          optionLabel: `${product.name} — ${$t('admin.color') || 'Couleur'}`,
+          valueLabel: color,
+        })
+      }
+
+      selectionSummary.push(
+        [product.name, size, color]
+          .filter(Boolean)
+          .join(' / '),
+      )
     }
 
-    selectionSummary.push(
-      [product.name, selection.size, selection.color]
-        .filter(Boolean)
-        .join(' / '),
-    )
-  }
+    return {
+      raw: item,
+      product,
+      size,
+      color,
+      stockId,
+    }
+  })
 
   const variantId = [
     'pack',
@@ -384,12 +447,13 @@ function addPackToCart() {
     quantity: 1,
     image: props.pack.images?.[0],
     selectedOptions,
-    packItems: props.pack.items.map((item) => ({
-      productId: item.productId,
-      productName: item.product?.name || '#' + item.productId,
-      size: selections[item.id]?.size ?? null,
-      color: selections[item.id]?.color ?? null,
-      quantity: item.quantity,
+    packItems: detailedItems.map(({ raw, product, size, color, stockId }) => ({
+      productId: raw.productId,
+      productName: product?.name || '#' + raw.productId,
+      size,
+      color,
+      quantity: raw.quantity,
+      stockId,
     })),
   })
 

@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import EventCard from '@/components/EventCard.vue'
 import EventModal from '@/components/EventModal.vue'
 import { normalizeEventRow, type EventRecord } from '@/composables/useEvents'
@@ -57,21 +57,48 @@ async function fetchEvents() {
   } else {
     events.value = (data ?? []).map(normalizeEventRow)
   }
+
+  now.value = new Date()
 }
 
-const now = new Date()
+const now = ref(new Date())
 
 const upcomingEvents = computed(() =>
-  events.value.filter(e => new Date(e.date).getTime() >= now.getTime())
+  events.value.filter(e => new Date(e.date).getTime() >= now.value.getTime())
 )
 
 const pastEvents = computed(() =>
-  events.value.filter(e => new Date(e.date).getTime() < now.getTime()).reverse()
+  events.value.filter(e => new Date(e.date).getTime() < now.value.getTime()).reverse()
 )
 
 function openModal(event: EventRecord) {
   selectedEvent.value = event
 }
 
-onMounted(fetchEvents)
+function handleVisibilityChange() {
+  if (document.visibilityState === 'visible') {
+    void fetchEvents()
+  }
+}
+
+function handlePageShow(event: PageTransitionEvent) {
+  if (event.persisted) {
+    void fetchEvents()
+  }
+}
+
+onMounted(() => {
+  void fetchEvents()
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pageshow', handlePageShow)
+  }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('pageshow', handlePageShow)
+  }
+})
 </script>

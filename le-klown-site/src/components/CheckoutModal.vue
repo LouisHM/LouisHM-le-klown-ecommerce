@@ -300,7 +300,7 @@ function lineTotal(it: { price: any; quantity: number }) {
   return priceNum(it.price) * Math.max(1, Number(it.quantity) || 1)
 }
 function formatPrice(n: number) { return n.toFixed(2) }
-function formatOptions(options?: CartOption[], packItems?: Array<{ productName?: string; size?: string | null; color?: string | null; quantity?: number }> | null) {
+function formatOptions(options?: CartOption[], packItems?: Array<{ productName?: string; product_name?: string; size?: string | null; color?: string | null; quantity?: number }> | null) {
   const parts: string[] = []
   if (Array.isArray(options)) {
     parts.push(...options.map(opt => opt.valueLabel).filter(Boolean))
@@ -309,7 +309,8 @@ function formatOptions(options?: CartOption[], packItems?: Array<{ productName?:
     parts.push(
       ...packItems.map((entry) => {
         const tokens: string[] = []
-        if (entry.productName) tokens.push(entry.productName)
+        const name = entry.productName || entry.product_name
+        if (name) tokens.push(name)
         if (entry.size) tokens.push(String(entry.size))
         if (entry.color) tokens.push(String(entry.color))
         if (entry.quantity && entry.quantity > 1) tokens.push(`×${entry.quantity}`)
@@ -420,18 +421,34 @@ async function submit() {
   const items_html = `<table cellspacing="0" cellpadding="0" width="100%" style="border-collapse:collapse; font-size:14px;">${rows}</table>`
   let orderRef = buildOrderRef()
 
-  const itemsSnapshot = props.cartItems.map(it => ({
-    type: (it as any).type ?? 'product',
-    product_id: (it as any).productId ?? null,
-    pack_id: (it as any).packId ?? null,
-    variant_id: (it as any).variantId ?? null,
-    name: it.name,
-    price: Number(it.price) || 0,
-    quantity: Number(it.quantity) || 1,
-    options: it.selectedOptions ?? [],
-    pack_items: (it as any).packItems ?? [],
-    image: (it as any).image ?? null,
-  }))
+  const itemsSnapshot = props.cartItems.map((it) => {
+    const rawPackItems = Array.isArray((it as any).packItems) ? (it as any).packItems : []
+    const packItems = rawPackItems.map((entry: any) => ({
+      product_id: entry.productId ?? null,
+      product_stock_id: asUuid(entry.stockId ?? null),
+      productName: entry.productName ?? null,
+      product_name: entry.productName ?? null,
+      size: entry.size ?? null,
+      color: entry.color ?? null,
+      quantity: Number(entry.quantity) || 1,
+    }))
+
+    return {
+      type: (it as any).type ?? 'product',
+      product_id: (it as any).productId ?? null,
+      pack_id: (it as any).packId ?? null,
+      variant_id: asUuid((it as any).variantId),
+      product_stock_id: asUuid((it as any).stockId ?? null),
+      size: (it as any).size ?? null,
+      color: (it as any).color ?? null,
+      name: it.name,
+      price: Number(it.price) || 0,
+      quantity: Number(it.quantity) || 1,
+      options: it.selectedOptions ?? [],
+      pack_items: packItems,
+      image: (it as any).image ?? null,
+    }
+  })
 
   const insertPayload = {
     order_ref: orderRef,
@@ -474,7 +491,11 @@ async function submit() {
   submitting.value = true
   try {
     const { data, error: rpcError } = await supabase.rpc('create_order_with_stock', { payload: insertPayload })
-    if (rpcError) throw new Error(rpcError.message || 'Création de commande impossible.')
+    if (rpcError) {
+      handleOrderError(rpcError)
+      submitting.value = false
+      return
+    }
 
     const createdOrder = extractOrderRecord(data)
     if (!createdOrder) throw new Error('Aucune commande retournée par le serveur.')
@@ -513,9 +534,78 @@ async function submit() {
     return
   } catch (e: any) {
     console.error(e)
-    error.value = t('form.error') || (e?.message ?? 'Une erreur est survenue. Réessaie.')
+    handleOrderError(e)
     submitting.value = false
   }
+}
+
+function asUuid(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  return uuidRegex.test(value.trim()) ? value.trim() : null
+}
+
+function handleOrderError(err: any) {
+  const message = String(err?.message ?? '')
+  if (/STOCK_UNAVAILABLE/i.test(message) || /stock insuffisant/i.test(message)) {
+    const detail = typeof err?.details === 'string' ? err.details : typeof err?.detail === 'string' ? err.detail : ''
+    const itemLabel = detail ? findUnavailableItemLabel(detail) : ''
+    if (itemLabel) {
+      error.value = t('cart.stockUnavailableItem', { item: itemLabel }) || `${itemLabel} n'est plus disponible.`
+    } else {
+      error.value = t('cart.stockUnavailable') || 'Certains articles ne sont plus disponibles. Rafraîchis le panier.'
+    }
+    return
+  }
+  error.value = t('form.error') || (message || 'Une erreur est survenue. Réessaie.')
+}
+
+function findUnavailableItemLabel(detail: string): string {
+  const info = parseDetail(detail)
+  const productId = info.product ?? info.product_id
+  const size = normalizeVariantPart(info.size)
+  const color = normalizeVariantPart(info.color)
+  const variant = [size, color].filter(Boolean).join(' / ')
+
+  if (!productId) return ''
+
+  const directItem = props.cartItems.find((item) => item.productId === productId)
+  if (directItem) {
+    const label = directItem.name
+    return variant ? `${label} — ${variant}` : label
+  }
+
+  const packItem = props.cartItems.find((item) =>
+    Array.isArray((item as any).packItems) &&
+    (item as any).packItems.some((entry: any) => entry.productId === productId)
+  )
+
+  if (packItem && Array.isArray((packItem as any).packItems)) {
+    const entry = (packItem as any).packItems.find((row: any) => row.productId === productId)
+    if (entry) {
+      const base = `${packItem.name}: ${entry.productName || '#' + productId}`
+      const entryVariant = [entry.size || size, entry.color || color].filter(Boolean).join(' / ')
+      return entryVariant ? `${base} — ${entryVariant}` : base
+    }
+  }
+
+  return ''
+}
+
+function parseDetail(detail: string): Record<string, string> {
+  return detail
+    .split(',')
+    .map((part) => part.trim())
+    .reduce<Record<string, string>>((acc, part) => {
+      const [key, value] = part.split('=')
+      if (key) acc[key.trim()] = (value ?? '').trim()
+      return acc
+    }, {})
+}
+
+function normalizeVariantPart(part?: string | null) {
+  if (!part) return ''
+  return part.replace(/_/g, ' ').trim()
 }
 </script>
 

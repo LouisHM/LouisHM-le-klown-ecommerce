@@ -143,9 +143,7 @@ async function applySession(session: Session | null) {
   if (typeof window !== 'undefined') {
     const startedAt = getSessionStart()
     const now = Date.now()
-    if (startedAt === null) {
-      setSessionStart(now)
-    } else if (now - startedAt > MAX_SESSION_AGE_MS) {
+    if (startedAt !== null && now - startedAt > MAX_SESSION_AGE_MS) {
       clearSessionStart()
       await supabase.auth.signOut()
       user.value = null
@@ -154,6 +152,8 @@ async function applySession(session: Session | null) {
       lastName.value = ''
       return
     }
+
+    setSessionStart(now)
   }
 
   const nextUser = session.user
@@ -285,7 +285,7 @@ export async function signInWithGoogle() {
   return runWithState(async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: redirectUrl() },
+      options: { redirectTo: redirectUrl(), queryParams: {prompt: 'select_account'} },
     })
     if (error) throw error
   })

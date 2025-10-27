@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onBeforeUnmount } from 'vue'
 import { useProducts } from '@/composables/useProducts'
 import { usePacks } from '@/composables/usePacks'
 import ProductCard from '@/components/ProductCard.vue'
@@ -70,7 +70,34 @@ const {
 const isLoading = computed(() => productsLoading.value || packsLoading.value)
 const globalError = computed(() => productsError.value || packsError.value)
 
-onMounted(async () => {
+async function loadCatalog() {
   await Promise.all([fetchProducts(), fetchPacks()])
+}
+
+function handleVisibilityChange() {
+  if (document.visibilityState === 'visible') {
+    void loadCatalog()
+  }
+}
+
+function handlePageShow(event: PageTransitionEvent) {
+  if (event.persisted) {
+    void loadCatalog()
+  }
+}
+
+onMounted(() => {
+  void loadCatalog()
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pageshow', handlePageShow)
+  }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('pageshow', handlePageShow)
+  }
 })
 </script>

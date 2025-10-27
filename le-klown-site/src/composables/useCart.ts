@@ -7,6 +7,7 @@ export interface CartPackSelection {
   size?: string | null
   color?: string | null
   quantity: number
+  stockId?: string | null
 }
 
 export interface CartItem {
@@ -21,6 +22,9 @@ export interface CartItem {
   selectedOptions?: CartOption[]
   packItems?: CartPackSelection[]
   stockStatus?: 'inStock' | 'lowStock' | 'outOfStock'
+  stockId?: string | null
+  size?: string | null
+  color?: string | null
 }
 
 export interface CartOption {
