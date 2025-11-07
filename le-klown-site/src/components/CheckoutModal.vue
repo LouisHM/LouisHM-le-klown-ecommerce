@@ -216,7 +216,7 @@ const emit = defineEmits<{
 const showingSummary = ref(false)
 const cartStore = useCart()
 
-const FREE_SHIPPING_THRESHOLD = 25
+const FREE_SHIPPING_THRESHOLD = 40
 const SHIPPING_FEE = 5
 
 const paymentStrings = computed(() => locale.value === 'fr'

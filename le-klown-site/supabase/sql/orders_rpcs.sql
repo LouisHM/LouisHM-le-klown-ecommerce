@@ -130,8 +130,27 @@ begin
   size_value := coalesce(validation.size_out, size_value);
   color_value := coalesce(validation.color_out, color_value);
 
+  if resolved_product_id is not null then
+    perform 1
+    from products
+    where id = resolved_product_id;
+
+    if not found then
+      if factor > 0 then
+        -- Product no longer exists; skip silent restock.
+        return;
+      else
+        raise exception using errcode = 'P0001', message = 'STOCK_UNAVAILABLE', detail = 'product_missing';
+      end if;
+    end if;
+  end if;
+
   if resolved_stock_id is null then
     if resolved_product_id is null then
+      if factor > 0 then
+        -- Nothing to restock for legacy snapshots lacking identifiers.
+        return;
+      end if;
       raise exception using errcode = 'P0001', message = 'STOCK_UNAVAILABLE', detail = 'product_missing';
     end if;
 
@@ -196,7 +215,19 @@ declare
   quantity integer;
   pack_quantity integer;
   item_type text;
-  validation record;
+  uuid_pattern constant text := '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$';
+  stock_text text;
+  product_text text;
+  size_text text;
+  color_text text;
+  stock_uuid uuid;
+  product_uuid uuid;
+  pack_stock_text text;
+  pack_product_text text;
+  pack_size_text text;
+  pack_color_text text;
+  pack_stock_uuid uuid;
+  pack_product_uuid uuid;
 begin
   if items is null then
     raise exception 'Items payload is required.' using errcode = 'P0001';
@@ -213,24 +244,105 @@ begin
     if item_type = 'pack' then
       for pack_item in select jsonb_array_elements(coalesce(item->'pack_items', '[]'::jsonb)) loop
         pack_quantity := greatest(0, coalesce((pack_item->>'quantity')::int, 0)) * quantity;
-        select *
-          into validation
-        from public.validate_product_stock(
-          nullif(pack_item->>'product_stock_id', '')::uuid,
-          nullif(pack_item->>'product_id', '')::uuid,
-          nullif(pack_item->>'size', ''),
-          nullif(pack_item->>'color', ''),
+
+        pack_stock_text := coalesce(
+          nullif(pack_item->>'product_stock_id', ''),
+          nullif(pack_item->>'productStockId', ''),
+          nullif(pack_item->>'stock_id', ''),
+          nullif(pack_item->>'stockId', '')
+        );
+        if pack_stock_text ~* uuid_pattern then
+          pack_stock_uuid := pack_stock_text::uuid;
+        else
+          pack_stock_uuid := null;
+        end if;
+
+        pack_product_text := coalesce(
+          nullif(pack_item->>'product_id', ''),
+          nullif(pack_item->>'productId', '')
+        );
+        if pack_product_text ~* uuid_pattern then
+          pack_product_uuid := pack_product_text::uuid;
+        else
+          pack_product_uuid := null;
+        end if;
+
+        pack_size_text := coalesce(
+          nullif(trim(coalesce(pack_item->>'size', '')), ''),
+          (
+            select nullif(trim(coalesce(opt->>'valueLabel', opt->>'value', opt->>'label')), '')
+            from jsonb_array_elements(coalesce(pack_item->'options', '[]'::jsonb)) opt
+            where lower(coalesce(opt->>'optionLabel', opt->>'label', opt->>'name', opt->>'optionId', opt->>'id')) in ('size', 'taille')
+            limit 1
+          )
+        );
+
+        pack_color_text := coalesce(
+          nullif(trim(coalesce(pack_item->>'color', '')), ''),
+          (
+            select nullif(trim(coalesce(opt->>'valueLabel', opt->>'value', opt->>'label')), '')
+            from jsonb_array_elements(coalesce(pack_item->'options', '[]'::jsonb)) opt
+            where lower(coalesce(opt->>'optionLabel', opt->>'label', opt->>'name', opt->>'optionId', opt->>'id')) in ('color', 'colour', 'couleur')
+            limit 1
+          )
+        );
+
+        perform public.validate_product_stock(
+          pack_stock_uuid,
+          pack_product_uuid,
+          pack_size_text,
+          pack_color_text,
           pack_quantity
         );
       end loop;
     else
-      select *
-        into validation
-      from public.validate_product_stock(
-        nullif(item->>'product_stock_id', '')::uuid,
-        nullif(item->>'product_id', '')::uuid,
-        nullif(item->>'size', ''),
-        nullif(item->>'color', ''),
+      stock_text := coalesce(
+        nullif(item->>'product_stock_id', ''),
+        nullif(item->>'productStockId', ''),
+        nullif(item->>'stock_id', ''),
+        nullif(item->>'stockId', '')
+      );
+      if stock_text ~* uuid_pattern then
+        stock_uuid := stock_text::uuid;
+      else
+        stock_uuid := null;
+      end if;
+
+      product_text := coalesce(
+        nullif(item->>'product_id', ''),
+        nullif(item->>'productId', '')
+      );
+      if product_text ~* uuid_pattern then
+        product_uuid := product_text::uuid;
+      else
+        product_uuid := null;
+      end if;
+
+      size_text := coalesce(
+        nullif(trim(coalesce(item->>'size', '')), ''),
+        (
+          select nullif(trim(coalesce(opt->>'valueLabel', opt->>'value', opt->>'label')), '')
+          from jsonb_array_elements(coalesce(item->'options', '[]'::jsonb)) opt
+          where lower(coalesce(opt->>'optionLabel', opt->>'label', opt->>'name', opt->>'optionId', opt->>'id')) in ('size', 'taille')
+          limit 1
+        )
+      );
+
+      color_text := coalesce(
+        nullif(trim(coalesce(item->>'color', '')), ''),
+        (
+          select nullif(trim(coalesce(opt->>'valueLabel', opt->>'value', opt->>'label')), '')
+          from jsonb_array_elements(coalesce(item->'options', '[]'::jsonb)) opt
+          where lower(coalesce(opt->>'optionLabel', opt->>'label', opt->>'name', opt->>'optionId', opt->>'id')) in ('color', 'colour', 'couleur')
+          limit 1
+        )
+      );
+
+      perform public.validate_product_stock(
+        stock_uuid,
+        product_uuid,
+        size_text,
+        color_text,
         quantity
       );
     end if;
@@ -253,6 +365,19 @@ declare
   quantity integer;
   pack_quantity integer;
   item_type text;
+  uuid_pattern constant text := '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$';
+  stock_text text;
+  product_text text;
+  size_text text;
+  color_text text;
+  stock_uuid uuid;
+  product_uuid uuid;
+  pack_stock_text text;
+  pack_product_text text;
+  pack_size_text text;
+  pack_color_text text;
+  pack_stock_uuid uuid;
+  pack_product_uuid uuid;
 begin
   if items is null then
     raise exception 'Items payload is required.' using errcode = 'P0001';
@@ -269,21 +394,106 @@ begin
     if item_type = 'pack' then
       for pack_item in select jsonb_array_elements(coalesce(item->'pack_items', '[]'::jsonb)) loop
         pack_quantity := greatest(0, coalesce((pack_item->>'quantity')::int, 0)) * quantity;
+
+        pack_stock_text := coalesce(
+          nullif(pack_item->>'product_stock_id', ''),
+          nullif(pack_item->>'productStockId', ''),
+          nullif(pack_item->>'stock_id', ''),
+          nullif(pack_item->>'stockId', '')
+        );
+        if pack_stock_text ~* uuid_pattern then
+          pack_stock_uuid := pack_stock_text::uuid;
+        else
+          pack_stock_uuid := null;
+        end if;
+
+        pack_product_text := coalesce(
+          nullif(pack_item->>'product_id', ''),
+          nullif(pack_item->>'productId', '')
+        );
+        if pack_product_text ~* uuid_pattern then
+          pack_product_uuid := pack_product_text::uuid;
+        else
+          pack_product_uuid := null;
+        end if;
+
+        pack_size_text := coalesce(
+          nullif(trim(coalesce(pack_item->>'size', '')), ''),
+          (
+            select nullif(trim(coalesce(opt->>'valueLabel', opt->>'value', opt->>'label')), '')
+            from jsonb_array_elements(coalesce(pack_item->'options', '[]'::jsonb)) opt
+            where lower(coalesce(opt->>'optionLabel', opt->>'label', opt->>'name', opt->>'optionId', opt->>'id')) in ('size', 'taille')
+            limit 1
+          )
+        );
+
+        pack_color_text := coalesce(
+          nullif(trim(coalesce(pack_item->>'color', '')), ''),
+          (
+            select nullif(trim(coalesce(opt->>'valueLabel', opt->>'value', opt->>'label')), '')
+            from jsonb_array_elements(coalesce(pack_item->'options', '[]'::jsonb)) opt
+            where lower(coalesce(opt->>'optionLabel', opt->>'label', opt->>'name', opt->>'optionId', opt->>'id')) in ('color', 'colour', 'couleur')
+            limit 1
+          )
+        );
+
         perform public.adjust_product_stock(
-          nullif(pack_item->>'product_stock_id', '')::uuid,
-          nullif(pack_item->>'product_id', '')::uuid,
-          nullif(pack_item->>'size', ''),
-          nullif(pack_item->>'color', ''),
+          pack_stock_uuid,
+          pack_product_uuid,
+          pack_size_text,
+          pack_color_text,
           pack_quantity,
           factor
         );
       end loop;
     else
+      stock_text := coalesce(
+        nullif(item->>'product_stock_id', ''),
+        nullif(item->>'productStockId', ''),
+        nullif(item->>'stock_id', ''),
+        nullif(item->>'stockId', '')
+      );
+      if stock_text ~* uuid_pattern then
+        stock_uuid := stock_text::uuid;
+      else
+        stock_uuid := null;
+      end if;
+
+      product_text := coalesce(
+        nullif(item->>'product_id', ''),
+        nullif(item->>'productId', '')
+      );
+      if product_text ~* uuid_pattern then
+        product_uuid := product_text::uuid;
+      else
+        product_uuid := null;
+      end if;
+
+      size_text := coalesce(
+        nullif(trim(coalesce(item->>'size', '')), ''),
+        (
+          select nullif(trim(coalesce(opt->>'valueLabel', opt->>'value', opt->>'label')), '')
+          from jsonb_array_elements(coalesce(item->'options', '[]'::jsonb)) opt
+          where lower(coalesce(opt->>'optionLabel', opt->>'label', opt->>'name', opt->>'optionId', opt->>'id')) in ('size', 'taille')
+          limit 1
+        )
+      );
+
+      color_text := coalesce(
+        nullif(trim(coalesce(item->>'color', '')), ''),
+        (
+          select nullif(trim(coalesce(opt->>'valueLabel', opt->>'value', opt->>'label')), '')
+          from jsonb_array_elements(coalesce(item->'options', '[]'::jsonb)) opt
+          where lower(coalesce(opt->>'optionLabel', opt->>'label', opt->>'name', opt->>'optionId', opt->>'id')) in ('color', 'colour', 'couleur')
+          limit 1
+        )
+      );
+
       perform public.adjust_product_stock(
-        nullif(item->>'product_stock_id', '')::uuid,
-        nullif(item->>'product_id', '')::uuid,
-        nullif(item->>'size', ''),
-        nullif(item->>'color', ''),
+        stock_uuid,
+        product_uuid,
+        size_text,
+        color_text,
         quantity,
         factor
       );
@@ -518,6 +728,8 @@ as $$
 declare
   order_row commandes;
   now_ts timestamptz := now();
+  target_del_flag boolean := del_flag;
+  items_payload jsonb;
 begin
   if not public.is_admin(auth.uid()) then
     raise exception 'Accès refusé.' using errcode = '42501';
@@ -536,14 +748,16 @@ begin
     return order_row;
   end if;
 
-  if del_flag is true then
-    perform public.adjust_order_items_stock(order_row.items_snapshot, 1);
+  items_payload := coalesce(order_row.items_snapshot, '[]'::jsonb);
+
+  if target_del_flag is true then
+    perform public.adjust_order_items_stock(items_payload, 1);
   else
-    perform public.adjust_order_items_stock(order_row.items_snapshot, -1);
+    perform public.adjust_order_items_stock(items_payload, -1);
   end if;
 
   update commandes
-    set del_flag = del_flag,
+    set del_flag = target_del_flag,
         updated_at = now_ts
   where id = order_id
   returning * into order_row;

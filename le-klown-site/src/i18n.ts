@@ -107,7 +107,7 @@ const messages = {
       },
       promo: {
         default: '🎪 Welcome to the shop!',
-        freeShipping: '🚚 Free shipping on orders over 25€ 🚚',
+        freeShipping: '🚚 Free shipping on orders over 40€ 🚚',
         discount10: '🔥 10% off all T-shirts this week',
       },
     },
@@ -272,6 +272,9 @@ const messages = {
       title: 'Events',
       upcoming: 'Upcoming',
       past: 'Past',
+      noUpcoming: 'No upcoming events yet.',
+      noPast: 'No past events yet.',
+      loadMore: 'Load more',
     },
 
     form: {
@@ -589,7 +592,7 @@ const messages = {
       },
       promo: {
         default: '🎪 Bienvenue dans la boutique !',
-        freeShipping: '🚚 Livraison gratuite dès 25€ d\'achat 🚚',
+        freeShipping: '🚚 Livraison gratuite dès 40€ d\'achat 🚚',
         discount10: '🔥 -10% sur tous les T-shirts cette semaine',
       },
     },
@@ -754,6 +757,9 @@ const messages = {
       title: 'Événements',
       upcoming: 'À venir',
       past: 'Passés',
+      noUpcoming: 'Aucun évènement à venir pour le moment.',
+      noPast: 'Pas encore d\'évènements passés.',
+      loadMore: 'Voir plus',
     },
 
     form: {

@@ -468,7 +468,7 @@ import AdminPackForm from '@/components/AdminPackForm.vue'
 import EventModal from '@/components/EventModal.vue'
 import { useProducts, type Product } from '@/composables/useProducts'
 import { usePacks, type Pack } from '@/composables/usePacks'
-import { normalizeEventRow, type EventRecord } from '@/composables/useEvents'
+import { normalizeEventRow, type EventRecord, invalidateEventCaches } from '@/composables/useEvents'
 import { role, authReady, refreshSession } from '@/composables/useAuth'
 
 const { t, locale } = useI18n()
@@ -552,6 +552,7 @@ function editEvent(e: EventRecord) {
 async function onEventSaved() {
   formEvent.value = null
   await fetchEvents()
+  invalidateEventCaches()
   scrollToForm('events')
 }
 
@@ -605,6 +606,7 @@ async function performDelete() {
       const { error } = await supabase.from('evenements').delete().eq('id', deleteTarget.id)
       if (error) throw error
       await fetchEvents()
+      invalidateEventCaches()
     } else if (deleteTarget.type === 'product') {
       const { error } = await deleteProduct(deleteTarget.id)
       if (error) throw error

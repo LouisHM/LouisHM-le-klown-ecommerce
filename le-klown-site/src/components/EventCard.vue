@@ -9,6 +9,8 @@
       :src="primaryImage"
       alt="Visuel de l'événement"
       class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 z-0"
+      loading="lazy"
+      decoding="async"
     />
 
     <!-- Zone texte en bas -->
@@ -43,7 +45,13 @@
         :key="index"
         class="w-9 h-9 rounded-md overflow-hidden border border-white/40 bg-black/30 backdrop-blur-sm"
       >
-        <img :src="thumb" alt="Miniature" class="w-full h-full object-cover" />
+        <img
+          :src="thumb"
+          alt="Miniature"
+          class="w-full h-full object-cover"
+          loading="lazy"
+          decoding="async"
+        />
       </div>
       <div
         v-if="extraImagesCount > 0"
