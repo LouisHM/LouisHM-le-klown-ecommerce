@@ -4,13 +4,14 @@
     @click="$emit('click')"
   >
     <!-- Image de fond -->
-    <img
+    <CachedImage
       v-if="primaryImage"
       :src="primaryImage"
       alt="Visuel de l'événement"
       class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 z-0"
       loading="lazy"
       decoding="async"
+      placeholder="/assets/img/default-product.jpg"
     />
 
     <!-- Zone texte en bas -->
@@ -45,12 +46,13 @@
         :key="index"
         class="w-9 h-9 rounded-md overflow-hidden border border-white/40 bg-black/30 backdrop-blur-sm"
       >
-        <img
+        <CachedImage
           :src="thumb"
           alt="Miniature"
           class="w-full h-full object-cover"
           loading="lazy"
           decoding="async"
+          placeholder="/assets/img/default-product.jpg"
         />
       </div>
       <div
@@ -76,6 +78,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { EventRecord } from '@/composables/useEvents'
+import CachedImage from '@/components/CachedImage.vue'
 
 const { event, editable = false } = defineProps<{ event: EventRecord; editable?: boolean }>()
 

@@ -4,10 +4,11 @@
     @click="showModal = true"
   >
     <div class="relative aspect-square bg-black/10">
-      <img
+      <CachedImage
         :src="currentImage"
         :alt="product.name"
         class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 md:group-hover:scale-105"
+        placeholder="/assets/img/default-product.jpg"
       />
 
       <button
@@ -81,6 +82,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ProductModal from '@/components/ProductModal.vue'
 import type { Product } from '@/composables/useProducts'
+import CachedImage from '@/components/CachedImage.vue'
 
 const props = defineProps<{ product: Product }>()
 const { t } = useI18n()

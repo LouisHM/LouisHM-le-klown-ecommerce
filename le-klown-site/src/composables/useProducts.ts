@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { supabase } from '@/supabase/client'
+import { prefetchImages } from '@/utils/imageCache'
 
 export interface ProductStockEntry {
   id: string
@@ -88,6 +89,7 @@ export function useProducts() {
       products.value = []
     } else {
       products.value = Array.isArray(data) ? data.map(mapProduct) : []
+      void prefetchImages(products.value.flatMap((product) => product.images))
     }
 
     loading.value = false
@@ -101,8 +103,11 @@ export function useProducts() {
       .eq('id', id)
       .single()
 
+    const mapped = data ? mapProduct(data) : null
+    if (mapped) void prefetchImages(mapped.images)
+
     return {
-      data: data ? mapProduct(data) : null,
+      data: mapped,
       error: err,
     }
   }

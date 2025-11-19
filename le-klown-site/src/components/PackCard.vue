@@ -4,10 +4,11 @@
     @click="showModal = true"
   >
     <div class="relative aspect-square bg-black/10">
-      <img
+      <CachedImage
         :src="currentImage"
         :alt="pack.name"
         class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 md:group-hover:scale-105"
+        placeholder="/assets/img/default-product.jpg"
       />
 
       <button
@@ -67,6 +68,7 @@
 import { computed, ref } from 'vue'
 import PackModal from '@/components/PackModal.vue'
 import type { Pack } from '@/composables/usePacks'
+import CachedImage from '@/components/CachedImage.vue'
 
 const props = defineProps<{ pack: Pack }>()
 const showModal = ref(false)

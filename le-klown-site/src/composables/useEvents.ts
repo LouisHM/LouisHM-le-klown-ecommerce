@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import type { PostgrestError } from '@supabase/supabase-js'
 import { supabase } from '@/supabase/client' // use alias
+import { prefetchImages } from '@/utils/imageCache'
 
 export interface EventRecord {
   id: string
@@ -38,7 +39,8 @@ interface FetchPageResult {
   error: PostgrestError | null
 }
 
-const EVENT_SELECT_FIELDS = 'id,nom,date,lieu,prix_debut,image_url,billeterie_url,insta_url,description,created_at'
+// The table currently exposes no created_at column in Supabase; omit it to prevent 400 errors.
+const EVENT_SELECT_FIELDS = 'id,nom,date,lieu,prix_debut,image_url,billeterie_url,insta_url,description'
 const CACHE_TTL_MS = 1000 * 60 * 5
 
 const upcomingCache: EventCacheBucket = { items: [], total: null, expiresAt: 0 }
@@ -155,6 +157,7 @@ export function useEvents() {
     }
 
     const mapped = (data ?? []).map(normalizeEventRow)
+    void prefetchImages(mapped.flatMap((event) => event.images))
     const total = count ?? bucket.total ?? null
 
     if (mapped.length) {
@@ -205,6 +208,7 @@ export function useEvents() {
       events.value = []
     } else {
       events.value = (data ?? []).map(normalizeEventRow)
+      void prefetchImages(events.value.flatMap((event) => event.images))
     }
 
     loading.value = false
@@ -219,7 +223,10 @@ export function useEvents() {
       .eq('id', id)
       .single()
 
-    return { data: data ? normalizeEventRow(data) : null, error: err }
+    const normalized = data ? normalizeEventRow(data) : null
+    if (normalized) void prefetchImages(normalized.images)
+
+    return { data: normalized, error: err }
   }
 
   /** Add a new event */

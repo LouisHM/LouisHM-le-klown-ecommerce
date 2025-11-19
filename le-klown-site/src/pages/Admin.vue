@@ -113,12 +113,12 @@
               class="bg-backgroundDark/70 border border-light/10 rounded-2xl p-6 flex flex-col gap-4 shadow-lg"
             >
               <div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-dark/30">
-                <img
+                <CachedImage
                   v-if="firstImage(p)"
                   :src="firstImage(p) ?? undefined"
                   alt=""
                   class="w-full h-full object-cover"
-                  @error="onImgError($event)"
+                  placeholder="/assets/img/default-product.jpg"
                 />
                 <div v-else class="w-full h-full grid place-items-center text-xs opacity-60">
                   {{ $t('admin.noImage') || 'Aucune image' }}
@@ -169,12 +169,15 @@
               </div>
 
               <div v-if="(p.images || []).length > 1" class="flex gap-2 overflow-x-auto">
-                <img
+                <CachedImage
                   v-for="(img, i) in p.images"
                   :key="i"
                   :src="img"
                   class="w-12 h-12 rounded-lg object-cover border border-light/10"
                   alt=""
+                  loading="lazy"
+                  decoding="async"
+                  placeholder="/assets/img/default-product.jpg"
                 />
               </div>
 
@@ -225,12 +228,12 @@
               class="bg-backgroundDark/70 border border-light/10 rounded-2xl p-6 flex flex-col gap-4 shadow-lg"
             >
               <div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-dark/30">
-                <img
+                <CachedImage
                   v-if="firstImage(pk)"
                   :src="firstImage(pk) ?? undefined"
                   alt=""
                   class="w-full h-full object-cover"
-                  @error="onImgError($event)"
+                  placeholder="/assets/img/default-product.jpg"
                 />
                 <div v-else class="w-full h-full grid place-items-center text-xs opacity-60">
                   {{ $t('admin.noImage') || 'Aucune image' }}
@@ -264,12 +267,15 @@
               </div>
 
               <div v-if="(pk.images || []).length > 1" class="flex gap-2 overflow-x-auto">
-                <img
+                <CachedImage
                   v-for="(img, i) in pk.images"
                   :key="i"
                   :src="img"
                   class="w-12 h-12 rounded-lg object-cover border border-light/10"
                   alt=""
+                  loading="lazy"
+                  decoding="async"
+                  placeholder="/assets/img/default-product.jpg"
                 />
               </div>
 
@@ -466,6 +472,7 @@ import AdminEventForm from '@/components/AdminEventForm.vue'
 import AdminProductForm from '@/components/AdminProductForm.vue'
 import AdminPackForm from '@/components/AdminPackForm.vue'
 import EventModal from '@/components/EventModal.vue'
+import CachedImage from '@/components/CachedImage.vue'
 import { useProducts, type Product } from '@/composables/useProducts'
 import { usePacks, type Pack } from '@/composables/usePacks'
 import { normalizeEventRow, type EventRecord, invalidateEventCaches } from '@/composables/useEvents'
@@ -668,7 +675,6 @@ function firstImage(p: any): string | null {
   const imgs = Array.isArray(p?.images) ? p.images : []
   return imgs.find((u: string) => !!u) || null
 }
-function onImgError(ev: Event) { (ev.target as HTMLImageElement).style.display = 'none' }
 
 type OrderStatus = 'passée' | 'payée' | 'envoyée' | 'livrée'
 

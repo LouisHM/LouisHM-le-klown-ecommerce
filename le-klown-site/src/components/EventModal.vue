@@ -31,10 +31,11 @@
         <!-- Image -->
         <div class="w-full bg-zinc-800 flex items-center justify-center overflow-hidden rounded-t-2xl relative" :class="imageContainerClasses">
           <template v-if="currentImage">
-            <img
+            <CachedImage
               :src="currentImage"
               :alt="`Visuel de l’événement: ${event.nom}`"
               class="object-contain h-full w-full"
+              placeholder="/assets/img/default-product.jpg"
             />
             <button
               v-if="hasMultiple"
@@ -69,7 +70,12 @@
             class="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden border transition"
             :class="index === currentIndex ? 'border-primary ring-2 ring-primary/60' : 'border-white/10 hover:border-primary/60'"
           >
-            <img :src="img" alt="Miniature" class="w-full h-full object-cover" />
+            <CachedImage
+              :src="img"
+              alt="Miniature"
+              class="w-full h-full object-cover"
+              placeholder="/assets/img/default-product.jpg"
+            />
           </button>
         </div>
 
@@ -120,6 +126,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { EventRecord } from '@/composables/useEvents'
+import CachedImage from '@/components/CachedImage.vue'
 
 defineEmits<{ (e: 'close'): void }>()
 const props = defineProps<{ event: EventRecord }>()

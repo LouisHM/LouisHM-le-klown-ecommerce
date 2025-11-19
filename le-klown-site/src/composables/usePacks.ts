@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { supabase } from '@/supabase/client'
 import type { Product } from './useProducts'
 import { mapProduct, humanizeErr } from './useProducts'
+import { prefetchImages } from '@/utils/imageCache'
 
 export interface PackItem {
   id: string
@@ -70,6 +71,7 @@ export function usePacks() {
       packs.value = []
     } else {
       packs.value = Array.isArray(data) ? data.map(mapPack) : []
+      void prefetchImages(packs.value.flatMap((pack) => pack.images))
     }
 
     loading.value = false
@@ -83,7 +85,10 @@ export function usePacks() {
       .eq('id', id)
       .single()
 
-    return { data: data ? mapPack(data) : null, error: err }
+    const mapped = data ? mapPack(data) : null
+    if (mapped) void prefetchImages(mapped.images)
+
+    return { data: mapped, error: err }
   }
 
   async function addPack(input: PackDraft) {

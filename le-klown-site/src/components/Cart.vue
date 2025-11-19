@@ -71,7 +71,14 @@
             class="bg-white/5 rounded-xl p-3 ring-1 ring-white/10 flex gap-3"
           >
             <div class="w-20 h-20 rounded-lg overflow-hidden bg-black/10 flex-shrink-0">
-              <img :src="it.image || fallbackImg" :alt="it.name" class="w-full h-full object-cover" />
+              <CachedImage
+                :src="it.image || fallbackImg"
+                :alt="it.name"
+                class="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+                :placeholder="fallbackImg"
+              />
             </div>
 
             <div class="flex-1 min-w-0">
@@ -174,6 +181,7 @@
 import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCart, type CartItem } from '@/composables/useCart'
+import CachedImage from '@/components/CachedImage.vue'
 
 const { t } = useI18n()
 

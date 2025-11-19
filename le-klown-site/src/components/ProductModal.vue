@@ -24,7 +24,12 @@
             <!-- Media -->
             <div class="p-3 md:p-0">
               <div class="relative flex items-center justify-center rounded-xl bg-black/10 overflow-hidden h-[60vh] md:h-auto md:aspect-square">
-                <img :src="currentImage" :alt="product.name" class="w-full h-full object-contain" />
+                <CachedImage
+                  :src="currentImage"
+                  :alt="product.name"
+                  class="w-full h-full object-contain"
+                  placeholder="/assets/img/default-product.jpg"
+                />
 
                 <button v-if="hasMultiple" @click.stop="prev" class="nav-btn left-3" aria-label="Image précédente">
                   <i class="fa-solid fa-chevron-left"></i>
@@ -49,7 +54,12 @@
                   :class="i === index ? 'ring-primary' : 'ring-white/10 hover:ring-white/30'"
                   @click="select(i)"
                 >
-                  <img :src="img" :alt="`${product.name} miniature ${i+1}`" class="w-full h-full object-cover" />
+                  <CachedImage
+                    :src="img"
+                    :alt="`${product.name} miniature ${i+1}`"
+                    class="w-full h-full object-cover"
+                    placeholder="/assets/img/default-product.jpg"
+                  />
                 </button>
               </div>
             </div>
@@ -154,6 +164,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Product } from '@/composables/useProducts'
 import { useCart, type CartOption } from '@/composables/useCart'
+import CachedImage from '@/components/CachedImage.vue'
 
 interface OptionChoice {
   id: string
