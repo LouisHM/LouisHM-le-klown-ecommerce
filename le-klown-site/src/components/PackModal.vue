@@ -66,11 +66,8 @@
 
             <!-- Details -->
             <div class="p-3 md:p-0 pr-3 md:pr-0 flex flex-col gap-4">
-              <div class="flex items-start justify-between gap-3">
+              <div class="flex items-start gap-3">
                 <h2 class="text-xl md:text-3xl font-heading leading-tight">{{ pack.name }}</h2>
-                <span class="px-3 py-1 text-[11px] md:text-xs font-semibold rounded bg-primary/80 text-dark">
-                  {{ pack.items.length }} {{ $t('admin.packItemsShort') || 'articles' }}
-                </span>
               </div>
 
               <div class="text-red-400 font-bold text-lg md:text-2xl">

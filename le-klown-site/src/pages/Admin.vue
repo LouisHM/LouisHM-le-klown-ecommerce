@@ -127,7 +127,10 @@
 
               <div class="flex flex-col gap-2 text-sm text-light/80">
                 <div>
-                  <h3 class="text-lg font-semibold text-light">{{ p.name }}</h3>
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-lg font-semibold text-light">{{ p.name }}</h3>
+                    <span class="text-[11px] px-2 py-1 rounded-full bg-white/10 text-light/70">#{{ p.sortOrder }}</span>
+                  </div>
                   <p class="line-clamp-2 opacity-80">{{ p.description }}</p>
                 </div>
                 <div class="flex items-center justify-between text-light">
@@ -245,11 +248,8 @@
                   <h3 class="text-lg font-semibold text-light">{{ pk.name }}</h3>
                   <p class="line-clamp-2 opacity-80">{{ pk.description }}</p>
                 </div>
-                <div class="flex items-center justify-between text-light">
+                <div class="flex items-center text-light gap-2">
                   <span class="font-bold">{{ (Number(pk.price) || 0).toFixed(2) }} €</span>
-                  <span class="text-xs text-light/70">
-                    {{ $t('admin.packItemsCount', { count: pk.items.length }) || `${pk.items.length} produit(s)` }}
-                  </span>
                 </div>
 
                 <ul class="text-xs text-light/70 space-y-1">

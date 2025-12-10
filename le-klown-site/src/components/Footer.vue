@@ -32,6 +32,7 @@
           <a href="https://open.spotify.com/intl-fr/artist/1Dk7GvynJJ9lOcTLQk6Ot3" target="_blank" rel="noopener" class="hover:text-primary transition"><i class="fab fa-spotify"></i></a>
           <a href="https://www.deezer.com/fr/artist/81617372" target="_blank" rel="noopener" class="hover:text-primary transition"><i class="fab fa-deezer"></i></a>
           <a href="https://music.apple.com/fr/artist/le-klown/1492515036" target="_blank" rel="noopener" class="hover:text-primary transition"><i class="fa-solid fa-music"></i></a>
+          <a href="https://shotgun.live/en/artists/leklown" target="_blank" rel="noopener" class="hover:text-primary transition"><i class="fa-solid fa-hourglass"></i></a>
         </div>
       </div>
     </div>

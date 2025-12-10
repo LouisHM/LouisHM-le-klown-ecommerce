@@ -15,6 +15,7 @@ export interface Product {
   name: string
   description: string | null
   price: number
+  sortOrder: number
   images: string[]
   deleted: boolean
   createdAt: string
@@ -30,6 +31,7 @@ export interface ProductDraft {
   name: string
   description: string | null
   price: number
+  sortOrder: number
   images: string[]
   sizeOptions: string[]
   colorOptions: string[]
@@ -78,6 +80,7 @@ export function useProducts() {
     let query = supabase
       .from(TABLE)
       .select('*, product_stocks(*)')
+      .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true })
 
     if (!includeDeleted) query = query.eq('deleted', false)
@@ -201,6 +204,7 @@ function buildProductPayload(input: ProductDraft) {
     name: input.name,
     description: input.description,
     price: Number(input.price) || 0,
+    sort_order: Math.trunc(Number(input.sortOrder) || 0),
     images,
     deleted: !!input.deleted,
     size_options: sizeOptions,
@@ -258,6 +262,7 @@ export function mapProduct(raw: any): Product {
     name: raw.name ?? '',
     description: raw.description ?? null,
     price: Number(raw.price ?? 0),
+    sortOrder: Number(raw.sort_order ?? 0) || 0,
     images: sanitizeStringArray(raw.images),
     deleted: !!raw.deleted,
     createdAt: raw.created_at ?? '',

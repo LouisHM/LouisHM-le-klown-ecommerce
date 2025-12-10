@@ -22,8 +22,8 @@
     <section class="bg-backgroundDark/70 border border-light/10 rounded-2xl p-5 space-y-4">
       <h4 class="font-semibold text-lg">{{ $t('admin.productInfos') || 'Informations produit' }}</h4>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <label class="block space-y-1">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <label class="block space-y-1 md:col-span-2">
           <span class="text-sm font-semibold">{{ $t('admin.name') || 'Nom' }} *</span>
           <input
             v-model.trim="form.name"
@@ -44,7 +44,21 @@
           />
         </label>
 
-        <label class="block md:col-span-2 space-y-1">
+        <label class="block space-y-1">
+          <span class="text-sm font-semibold">{{ $t('admin.sortOrder') || 'Ordre d’affichage' }}</span>
+          <input
+            v-model.number="form.sortOrder"
+            type="number"
+            step="1"
+            min="0"
+            class="input"
+          />
+          <p class="text-xs text-light/60">
+            {{ $t('admin.sortOrderHint') || 'Plus le nombre est petit, plus le produit apparaît haut dans la liste.' }}
+          </p>
+        </label>
+
+        <label class="block md:col-span-3 space-y-1">
           <span class="text-sm font-semibold">{{ $t('admin.description') || 'Description' }}</span>
           <textarea
             v-model.trim="form.description"
@@ -305,6 +319,7 @@ const form = reactive({
   name: '',
   description: '' as string | null,
   price: 0,
+  sortOrder: 0,
   images: [''] as string[],
   sizeOptions: [] as string[],
   colorOptions: [] as string[],
@@ -341,6 +356,7 @@ function loadFromProduct(product: Product | null) {
   form.name = product?.name ?? ''
   form.description = product?.description ?? ''
   form.price = Number(product?.price ?? 0)
+  form.sortOrder = Number(product?.sortOrder ?? 0)
   form.images = (product?.images ?? []).length ? [...product!.images] : ['']
   form.sizeOptions = [...(product?.sizeOptions ?? [])]
   form.colorOptions = [...(product?.colorOptions ?? [])]
@@ -541,6 +557,7 @@ function buildDraft(): ProductDraft {
     name: form.name.trim(),
     description: form.description?.trim() || null,
     price: Number(form.price) || 0,
+    sortOrder: Math.trunc(Number(form.sortOrder) || 0),
     images: form.images,
     sizeOptions,
     colorOptions,

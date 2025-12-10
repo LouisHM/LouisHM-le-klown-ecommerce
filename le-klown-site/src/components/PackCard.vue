@@ -30,11 +30,8 @@
     </div>
 
     <div class="p-4 flex flex-col gap-3">
-      <div class="flex items-start justify-between gap-3">
+      <div class="flex items-start gap-3">
         <h3 class="text-base font-semibold text-light leading-tight flex-1">{{ pack.name }}</h3>
-        <span class="px-2 py-1 text-[11px] rounded font-semibold bg-primary/80 text-dark">
-          {{ pack.items.length }} {{ $t('admin.packItemsShort') || 'articles' }}
-        </span>
       </div>
 
       <div class="text-sm text-light/70 line-clamp-2">
