@@ -114,7 +114,13 @@
                             :disabled="opt.disabled"
                             v-model="selections[item.id].size"
                           />
-                          {{ opt.label }}
+                          <span>{{ opt.label }}</span>
+                          <span
+                            v-if="opt.stock !== undefined && opt.stock <= 0"
+                            class="ml-2 text-[10px] uppercase tracking-wide font-semibold text-error"
+                          >
+                            {{ $t('shop.stock.outOfStock') || 'Rupture de stock' }}
+                          </span>
                         </label>
                       </div>
                     </div>
@@ -135,7 +141,13 @@
                             :disabled="opt.disabled"
                             v-model="selections[item.id].color"
                           />
-                          {{ opt.label }}
+                          <span>{{ opt.label }}</span>
+                          <span
+                            v-if="opt.stock !== undefined && opt.stock <= 0"
+                            class="ml-2 text-[10px] uppercase tracking-wide font-semibold text-error"
+                          >
+                            {{ $t('shop.stock.outOfStock') || 'Rupture de stock' }}
+                          </span>
                         </label>
                       </div>
                     </div>
@@ -185,6 +197,7 @@ interface OptionChoice {
   value: string | null
   label: string
   disabled: boolean
+  stock?: number
 }
 
 const props = defineProps<{
@@ -307,6 +320,7 @@ function sizeOptions(item: PackItem): OptionChoice[] {
       value: size,
       label: size,
       disabled: stock <= 0,
+      stock,
     }
   })
 }
@@ -323,6 +337,7 @@ function colorOptions(item: PackItem): OptionChoice[] {
       value: color,
       label: color,
       disabled: stock <= 0,
+      stock,
     }
   })
 }
@@ -338,19 +353,19 @@ function stockFor(product: Product | undefined | null, size: string | null, colo
     return Math.max(0, product.totalStock || 0)
   }
 
-  const total = stocks.reduce((sum, entry) => {
+  const matches = stocks.filter((entry) => {
     const entrySize = (entry.size ?? '').trim().toLowerCase()
     const entryColor = (entry.color ?? '').trim().toLowerCase()
 
-    // When one dimension is not chosen yet, treat it as a wildcard so the option stays selectable.
-    if (normSize && entrySize !== normSize) return sum
-    if (normColor && entryColor !== normColor) return sum
+    if (normSize && entrySize && entrySize !== normSize) return false
+    if (normColor && entryColor && entryColor !== normColor) return false
 
-    return sum + Math.max(0, Number(entry.stock) || 0)
-  }, 0)
+    return true
+  })
 
-  if (total > 0) return total
-  return Math.max(0, product.totalStock || 0)
+  if (!matches.length) return 0
+
+  return matches.reduce((sum, entry) => sum + Math.max(0, Number(entry.stock) || 0), 0)
 }
 
 function stockIdForProduct(product: Product | undefined | null, size: string | null, color: string | null): string | null {

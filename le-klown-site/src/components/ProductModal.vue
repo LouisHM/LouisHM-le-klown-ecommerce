@@ -96,11 +96,17 @@
                       <input
                         type="radio"
                         class="hidden"
-                        :value="size.value"
-                        :disabled="size.disabled"
-                        v-model="selectedSize"
-                      />
-                      {{ size.label }}
+                    :value="size.value"
+                    :disabled="size.disabled"
+                    v-model="selectedSize"
+                  />
+                      <span>{{ size.label }}</span>
+                      <span
+                        v-if="size.stock !== undefined && size.stock <= 0"
+                        class="ml-2 text-[10px] uppercase tracking-wide font-semibold text-error"
+                      >
+                        {{ $t('shop.stock.outOfStock') || 'Rupture de stock' }}
+                      </span>
                     </label>
                   </div>
                 </div>
@@ -119,11 +125,17 @@
                       <input
                         type="radio"
                         class="hidden"
-                        :value="color.value"
-                        :disabled="color.disabled"
-                        v-model="selectedColor"
-                      />
-                      {{ color.label }}
+                    :value="color.value"
+                    :disabled="color.disabled"
+                    v-model="selectedColor"
+                  />
+                      <span>{{ color.label }}</span>
+                      <span
+                        v-if="color.stock !== undefined && color.stock <= 0"
+                        class="ml-2 text-[10px] uppercase tracking-wide font-semibold text-error"
+                      >
+                        {{ $t('shop.stock.outOfStock') || 'Rupture de stock' }}
+                      </span>
                     </label>
                   </div>
                 </div>
@@ -171,6 +183,7 @@ interface OptionChoice {
   value: string | null
   label: string
   disabled: boolean
+  stock?: number
 }
 
 const props = defineProps<{
@@ -206,17 +219,6 @@ function prev() {
 function next() {
   index.value = (index.value + 1) % images.value.length
 }
-
-const stockMap = computed(() => {
-  const map = new Map<string, number>()
-  const fallbackKey = keyFor(null, null)
-  for (const entry of props.product.stocks) {
-    const key = keyFor(entry.size, entry.color)
-    map.set(key, (map.get(key) || 0) + Math.max(0, Number(entry.stock) || 0))
-  }
-  if (!map.size) map.set(fallbackKey, Math.max(0, props.product.totalStock || 0))
-  return map
-})
 
 function stockIdFor(size: string | null, color: string | null): string | null {
   const normalizedSize = (size ?? '').trim().toLowerCase()
@@ -256,6 +258,7 @@ const sizeOptions = computed<OptionChoice[]>(() => {
       value: size,
       label: size,
       disabled: stock <= 0,
+      stock,
     }
   })
 })
@@ -272,6 +275,7 @@ const colorOptions = computed<OptionChoice[]>(() => {
       value: color,
       label: color,
       disabled: stock <= 0,
+      stock,
     }
   })
 })
@@ -380,17 +384,26 @@ function autoCorrectColor() {
 }
 
 function stockFor(size: string | null, color: string | null) {
-  const keyExact = keyFor(size, color)
-  if (stockMap.value.has(keyExact)) return stockMap.value.get(keyExact) || 0
-  const fallbackKey = keyFor(size, null)
-  const fallbackColor = keyFor(null, color)
-  return (
-    stockMap.value.get(keyExact) ??
-    stockMap.value.get(fallbackKey) ??
-    stockMap.value.get(fallbackColor) ??
-    stockMap.value.get(keyFor(null, null)) ??
-    0
-  )
+  const stocks = Array.isArray(props.product.stocks) ? props.product.stocks : []
+  const normSize = (size ?? '').trim().toLowerCase()
+  const normColor = (color ?? '').trim().toLowerCase()
+
+  if (!stocks.length) {
+    return Math.max(0, props.product.totalStock || 0)
+  }
+
+  const matches = stocks.filter((entry) => {
+    const entrySize = (entry.size ?? '').trim().toLowerCase()
+    const entryColor = (entry.color ?? '').trim().toLowerCase()
+
+    if (normSize && entrySize && entrySize !== normSize) return false
+    if (normColor && entryColor && entryColor !== normColor) return false
+    return true
+  })
+
+  if (!matches.length) return 0
+
+  return matches.reduce((sum, entry) => sum + Math.max(0, Number(entry.stock) || 0), 0)
 }
 
 function addToCart() {
@@ -442,13 +455,7 @@ function addToCart() {
   emit('close')
 }
 
-function close() {
-  emit('close')
-}
-
-function keyFor(size: string | null, color: string | null) {
-  return `${(size ?? '').toLowerCase()}__${(color ?? '').toLowerCase()}`
-}
+function close() { emit('close') }
 
 function sizeClass(option: OptionChoice) {
   if (option.disabled) return 'opacity-40 cursor-not-allowed border-white/20 bg-black/30'
