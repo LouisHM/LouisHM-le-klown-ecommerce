@@ -70,6 +70,28 @@
             </button>
           </div>
         </div>
+
+        <div class="space-y-2 pt-2 border-t border-white/10">
+          <label class="block text-sm font-semibold">
+            {{ $t('admin.uploadImageLabel') || 'Téléverser une image (JPG/PNG)' }}
+          </label>
+          <input
+            type="file"
+            accept="image/png,image/jpeg"
+            class="block w-full text-sm text-light/80 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-primary/20 file:text-primary"
+            :disabled="uploadingImage"
+            @change="onUploadPackImage"
+          />
+          <p class="text-[11px] opacity-60">
+            {{ $t('admin.uploadImageHelp', { bucket: bucketName }) || `Les fichiers sont stockés dans ${bucketName}.` }}
+          </p>
+          <p v-if="uploadingImage" class="text-xs text-primary">
+            {{ $t('admin.uploadingImage') || 'Upload en cours…' }}
+          </p>
+          <p v-if="uploadImageError" class="text-xs text-error">
+            {{ uploadImageError }}
+          </p>
+        </div>
       </div>
     </section>
 
@@ -174,6 +196,7 @@ import { useI18n } from 'vue-i18n'
 import type { Pack, PackItem as PackItemRecord } from '@/composables/usePacks'
 import type { Product } from '@/composables/useProducts'
 import { usePacks } from '@/composables/usePacks'
+import { uploadImageToStorage, requiredBucketName } from '@/utils/storage'
 
 interface PackItemDraft {
   localId: string
@@ -195,7 +218,10 @@ const { t } = useI18n()
 
 const submitting = ref(false)
 const formError = ref<string | null>(null)
+const uploadingImage = ref(false)
+const uploadImageError = ref<string | null>(null)
 const isDev = import.meta.env.DEV
+const bucketName = requiredBucketName()
 
 function debugLog(...args: any[]) {
   if (isDev) console.debug(...args)
@@ -232,6 +258,7 @@ function loadFromPack(pack: Pack | null) {
     : [createEmptyItemRow()]
   ensureAtLeastOneItem()
   formError.value = null
+  uploadImageError.value = null
 }
 
 function addImageField() {
@@ -241,6 +268,34 @@ function addImageField() {
 function removeImageField(idx: number) {
   if (form.images.length <= 1) form.images[0] = ''
   else form.images.splice(idx, 1)
+}
+
+async function onUploadPackImage(event: Event) {
+  const input = event.target as HTMLInputElement | null
+  const file = input?.files?.[0]
+  if (!file) return
+
+  uploadImageError.value = null
+  uploadingImage.value = true
+
+  try {
+    const identifier = form.id || form.name || 'pack'
+    const publicUrl = await uploadImageToStorage(file, 'packs', identifier || 'pack')
+    debugLog('[AdminPackForm] image uploaded', publicUrl)
+
+    const blankIndex = form.images.findIndex((img) => !img.trim())
+    if (blankIndex >= 0) {
+      form.images[blankIndex] = publicUrl
+    } else if (!form.images.includes(publicUrl)) {
+      form.images.push(publicUrl)
+    }
+  } catch (err: any) {
+    debugLog('[AdminPackForm] image upload error', err)
+    uploadImageError.value = err?.message || t('common.error') || 'Une erreur est survenue.'
+  } finally {
+    uploadingImage.value = false
+    if (input) input.value = ''
+  }
 }
 
 function createEmptyItemRow(): PackItemDraft {

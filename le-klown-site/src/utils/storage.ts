@@ -27,7 +27,7 @@ function extractBucketFromUrl(url: string) {
   return null
 }
 
-export type UploadCategory = 'products' | 'events'
+export type UploadCategory = 'products' | 'events' | 'packs'
 
 function sanitizeFileName(name: string) {
   return name

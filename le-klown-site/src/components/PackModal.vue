@@ -8,8 +8,8 @@
       >
         <div
           class="bg-backgroundDark text-light rounded-none md:rounded-2xl shadow-2xl
-                w-screen md:w-full h-[100dvh] md:h-auto md:max-h-[85vh] max-w-4xl
-                overflow-hidden relative"
+                w-screen md:w-full h-[100dvh] max-h-[100svh] md:h-auto md:max-h-[85vh] max-w-4xl
+                overflow-y-auto md:overflow-hidden relative md:flex md:flex-col"
           @click.stop
         >
           <button
@@ -20,7 +20,7 @@
             &times;
           </button>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-0 md:gap-6 p-3 md:p-6 overflow-y-auto h-[calc(100dvh-0.75rem)] md:h-auto md:max-h-none">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-0 md:gap-6 p-3 md:p-6 h-auto md:h-auto md:max-h-none md:flex-1 md:overflow-y-auto md:min-h-0 touch-pan-y">
             <!-- Media -->
             <div class="p-3 md:p-0">
               <div class="relative flex items-center justify-center rounded-xl bg-black/10 overflow-hidden h-[60vh] md:h-auto md:aspect-square">
@@ -65,7 +65,7 @@
             </div>
 
             <!-- Details -->
-            <div class="p-3 md:p-0 pr-3 md:pr-0 flex flex-col gap-4">
+            <div class="p-3 md:p-0 pr-3 md:pr-0 flex flex-col gap-4 min-h-0">
               <div class="flex items-start gap-3">
                 <h2 class="text-xl md:text-3xl font-heading leading-tight">{{ pack.name }}</h2>
               </div>
@@ -78,7 +78,7 @@
                 {{ pack.description }}
               </p>
 
-              <div class="space-y-5 overflow-y-auto pr-2 md:pr-0">
+              <div class="space-y-5 overflow-visible md:overflow-y-auto pr-2 md:pr-0 flex-1 min-h-0 touch-pan-y pb-4">
                 <article
                   v-for="item in pack.items"
                   :key="item.id"
@@ -173,7 +173,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Pack, PackItem } from '@/composables/usePacks'
 import type { Product } from '@/composables/useProducts'
@@ -231,10 +231,22 @@ function initializeSelections() {
 watch(
   () => props.visible,
   (visible) => {
+    toggleScrollLock(visible)
     if (visible) initializeSelections()
   },
   { immediate: true },
 )
+
+onBeforeUnmount(() => toggleScrollLock(false))
+
+function toggleScrollLock(lock: boolean) {
+  const root = document.documentElement
+  if (lock) {
+    root.classList.add('overflow-hidden')
+  } else {
+    root.classList.remove('overflow-hidden')
+  }
+}
 
 function stockStatusForItem(item: PackItem): 'inStock' | 'lowStock' | 'outOfStock' {
   const product = item.product
@@ -317,26 +329,28 @@ function colorOptions(item: PackItem): OptionChoice[] {
 
 function stockFor(product: Product | undefined | null, size: string | null, color: string | null) {
   if (!product) return 0
-  const map = new Map<string, number>()
-  for (const entry of product.stocks) {
-    const key = keyFor(entry.size, entry.color)
-    map.set(key, (map.get(key) || 0) + Math.max(0, Number(entry.stock) || 0))
-  }
-  if (!map.size) {
-    map.set(keyFor(null, null), Math.max(0, product.totalStock || 0))
+
+  const stocks = Array.isArray(product.stocks) ? product.stocks : []
+  const normSize = (size ?? '').trim().toLowerCase()
+  const normColor = (color ?? '').trim().toLowerCase()
+
+  if (!stocks.length) {
+    return Math.max(0, product.totalStock || 0)
   }
 
-  const exact = keyFor(size, color)
-  if (map.has(exact)) return map.get(exact) || 0
-  const fallbackSize = keyFor(size, null)
-  const fallbackColor = keyFor(null, color)
-  return (
-    map.get(exact) ??
-    map.get(fallbackSize) ??
-    map.get(fallbackColor) ??
-    map.get(keyFor(null, null)) ??
-    0
-  )
+  const total = stocks.reduce((sum, entry) => {
+    const entrySize = (entry.size ?? '').trim().toLowerCase()
+    const entryColor = (entry.color ?? '').trim().toLowerCase()
+
+    // When one dimension is not chosen yet, treat it as a wildcard so the option stays selectable.
+    if (normSize && entrySize !== normSize) return sum
+    if (normColor && entryColor !== normColor) return sum
+
+    return sum + Math.max(0, Number(entry.stock) || 0)
+  }, 0)
+
+  if (total > 0) return total
+  return Math.max(0, product.totalStock || 0)
 }
 
 function stockIdForProduct(product: Product | undefined | null, size: string | null, color: string | null): string | null {
@@ -470,10 +484,6 @@ function addPackToCart() {
 
 function close() {
   emit('close')
-}
-
-function keyFor(size: string | null, color: string | null) {
-  return `${(size ?? '').toLowerCase()}__${(color ?? '').toLowerCase()}`
 }
 </script>
 

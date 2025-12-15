@@ -41,16 +41,6 @@
       <div class="flex items-center justify-between text-light">
         <span class="text-lg font-bold">{{ pack.price.toFixed(2) }} €</span>
       </div>
-
-      <ul class="text-[11px] text-light/60 space-y-1">
-        <li
-          v-for="item in pack.items"
-          :key="item.id"
-          class="truncate"
-        >
-          • {{ item.product?.name || '#' + item.productId }} × {{ item.quantity }}
-        </li>
-      </ul>
     </div>
 
     <PackModal

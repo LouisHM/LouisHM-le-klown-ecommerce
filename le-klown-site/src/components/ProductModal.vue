@@ -160,7 +160,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Product } from '@/composables/useProducts'
 import { useCart, type CartOption } from '@/composables/useCart'
@@ -309,10 +309,22 @@ const stockLabel = computed(() => $t(`shop.stock.${stockStatus.value}`))
 watch(
   () => props.visible,
   (visible) => {
+    toggleScrollLock(visible)
     if (visible) initializeSelection()
   },
   { immediate: true },
 )
+
+onBeforeUnmount(() => toggleScrollLock(false))
+
+function toggleScrollLock(lock: boolean) {
+  const root = document.documentElement
+  if (lock) {
+    root.classList.add('overflow-hidden')
+  } else {
+    root.classList.remove('overflow-hidden')
+  }
+}
 
 function initializeSelection() {
   selectionError.value = null
